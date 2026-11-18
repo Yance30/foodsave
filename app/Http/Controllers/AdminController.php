@@ -7,6 +7,7 @@ use App\Models\EmissionFactor;
 use App\Models\FoodListing;
 use App\Models\ImpactLog;
 use App\Models\User;
+use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
@@ -39,5 +40,70 @@ class AdminController extends Controller
     public function factors()
     {
         return view('admin.factors', ['factors' => EmissionFactor::withCount('categories')->get()]);
+    }
+
+    public function approveProvider(User $user)
+    {
+        abort_unless($user->role === 'provider', 404);
+
+        $user->update(['is_verified' => true]);
+
+        return back()->with('success', $user->name.' kini terverifikasi.');
+    }
+
+    public function rejectProvider(Request $request, User $user)
+    {
+        abort_unless($user->role === 'provider', 404);
+        abort_if($user->id === $request->user()->id, 403, 'Tidak bisa menolak akun sendiri.');
+
+        $user->delete();
+
+        return back()->with('success', 'Penyedia ditolak dan akunnya dihapus.');
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        abort_if($user->id === $request->user()->id, 403, 'Tidak bisa mengubah akun sendiri.');
+
+        $data = $request->validate([
+            'role' => ['required', 'in:receiver,provider,admin'],
+        ]);
+
+        $user->update([
+            'role' => $data['role'],
+            'is_verified' => $request->boolean('is_verified'),
+        ]);
+
+        return back()->with('success', 'Pengguna diperbarui.');
+    }
+
+    public function destroyUser(Request $request, User $user)
+    {
+        abort_if($user->id === $request->user()->id, 403, 'Tidak bisa menghapus akun sendiri.');
+
+        $user->delete();
+
+        return back()->with('success', 'Pengguna dihapus.');
+    }
+
+    public function storeFactor(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'kg_co2e_per_kg' => ['required', 'numeric', 'min:0'],
+            'source' => ['nullable', 'string', 'max:255'],
+            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
+        ]);
+
+        EmissionFactor::create($data);
+
+        return back()->with('success', 'Faktor emisi ditambahkan.');
+    }
+
+    public function destroyFactor(EmissionFactor $factor)
+    {
+        $factor->delete();
+
+        return back()->with('success', 'Faktor emisi dihapus.');
     }
 }

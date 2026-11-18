@@ -54,9 +54,17 @@
                                 <x-button href="{{ route('listings.show', $listing) }}" variant="secondary" class="flex-1 px-3 py-2 text-xs">
                                     <x-icon name="search" class="h-3.5 w-3.5" /> Lihat
                                 </x-button>
-                                <x-button variant="ghost" class="px-3 py-2 text-xs" aria-label="Edit">
+                                <x-button href="{{ route('provider.listings.edit', $listing) }}" variant="ghost" class="px-3 py-2 text-xs" aria-label="Edit">
                                     <x-icon name="edit" class="h-3.5 w-3.5" />
                                 </x-button>
+                                <form method="POST" action="{{ route('provider.listings.destroy', $listing) }}"
+                                    onsubmit="return confirm('Hapus listing ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="inline-flex h-full items-center rounded-btn px-3 py-2 text-xs text-danger hover:bg-danger/10" aria-label="Hapus">
+                                        <x-icon name="trash" class="h-3.5 w-3.5" />
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>

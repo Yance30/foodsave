@@ -22,10 +22,18 @@
                                 </p>
                             </div>
                             <div class="flex gap-2">
-                                <x-button variant="secondary" class="px-3 py-2 text-xs">Tolak</x-button>
-                                <x-button class="px-3 py-2 text-xs">
-                                    <x-icon name="check" class="h-3.5 w-3.5" /> Setujui
-                                </x-button>
+                                <form method="POST" action="{{ route('admin.verifications.reject', $provider) }}"
+                                    onsubmit="return confirm('Tolak dan hapus akun penyedia ini?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <x-button type="submit" variant="secondary" class="px-3 py-2 text-xs">Tolak</x-button>
+                                </form>
+                                <form method="POST" action="{{ route('admin.verifications.approve', $provider) }}">
+                                    @csrf
+                                    <x-button type="submit" class="px-3 py-2 text-xs">
+                                        <x-icon name="check" class="h-3.5 w-3.5" /> Setujui
+                                    </x-button>
+                                </form>
                             </div>
                         </div>
                     @endforeach
@@ -56,10 +64,5 @@
                 <p class="text-xs text-muted">Belum ada penyedia terverifikasi.</p>
             @endif
         </section>
-
-        <div class="card flex items-start gap-2 border border-accent/40 bg-accent/10 p-3 text-xs text-accent">
-            <x-icon name="alert" class="mt-0.5 h-4 w-4 shrink-0" />
-            <span>Demo frontend: aksi setujui/tolak verifikasi aktif pada tahap backend.</span>
-        </div>
     </div>
 </x-app-layout>
