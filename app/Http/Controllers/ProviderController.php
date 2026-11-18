@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Claim;
 use App\Models\FoodListing;
+use App\Services\ImpactCalculator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProviderController extends Controller
 {
@@ -69,5 +71,57 @@ class ProviderController extends Controller
                 ->with(['listing', 'receiver'])
                 ->get(),
         ]);
+    }
+
+    public function pickUp(Request $request, Claim $claim)
+    {
+        $this->authorizeClaim($request, $claim);
+
+        if ($claim->status !== 'booked') {
+            return back()->with('error', 'Klaim ini sudah diproses sebelumnya.');
+        }
+
+        $claim->status = 'picked_up';
+        $claim->picked_up_at = now();
+        $claim->save();
+
+        app(ImpactCalculator::class)->record($claim);
+
+        return back()->with('success', 'Pengambilan dikonfirmasi. Dampak tercatat.');
+    }
+
+    public function cancelClaim(Request $request, Claim $claim)
+    {
+        $this->authorizeClaim($request, $claim);
+
+        if ($claim->status !== 'booked') {
+            return back()->with('error', 'Klaim ini sudah diproses sebelumnya.');
+        }
+
+        DB::transaction(function () use ($claim) {
+            $claim->status = 'cancelled';
+            $claim->save();
+
+            $listing = FoodListing::whereKey($claim->listing_id)->lockForUpdate()->first();
+            if ($listing) {
+                $listing->qty_available += $claim->qty;
+                if ($listing->status === 'sold_out' && $listing->qty_available > 0 && $listing->pickup_end->isFuture()) {
+                    $listing->status = 'active';
+                }
+                $listing->save();
+            }
+        });
+
+        return back()->with('success', 'Klaim ditolak. Stok dikembalikan.');
+    }
+
+    private function authorizeClaim(Request $request, Claim $claim): void
+    {
+        $profile = $this->profile($request);
+
+        abort_unless(
+            $profile && $claim->listing && $claim->listing->provider_id === $profile->id,
+            403
+        );
     }
 }

@@ -34,18 +34,20 @@
                         </div>
 
                         <div class="flex gap-2">
-                            <x-button variant="secondary" class="flex-1 px-3 py-2 text-xs">Tolak</x-button>
-                            <x-button class="flex-1 px-3 py-2 text-xs">
-                                <x-icon name="check" class="h-3.5 w-3.5" /> Konfirmasi
-                            </x-button>
+                            <form method="POST" action="{{ route('provider.cancelClaim', $claim) }}" class="flex-1"
+                                onsubmit="return confirm('Tolak klaim ini? Stok akan dikembalikan.');">
+                                @csrf
+                                <x-button type="submit" variant="secondary" class="w-full px-3 py-2 text-xs">Tolak</x-button>
+                            </form>
+                            <form method="POST" action="{{ route('provider.pickUp', $claim) }}" class="flex-1">
+                                @csrf
+                                <x-button type="submit" class="w-full px-3 py-2 text-xs">
+                                    <x-icon name="check" class="h-3.5 w-3.5" /> Konfirmasi
+                                </x-button>
+                            </form>
                         </div>
                     </div>
                 @endforeach
-            </div>
-
-            <div class="card flex items-start gap-2 border border-accent/40 bg-accent/10 p-3 text-xs text-accent">
-                <x-icon name="alert" class="mt-0.5 h-4 w-4 shrink-0" />
-                <span>Demo frontend: konfirmasi pengambilan &amp; pencatatan dampak aktif pada tahap backend.</span>
             </div>
         @else
             <x-empty-state message="Tidak ada klaim yang menunggu konfirmasi saat ini." icon="ticket">

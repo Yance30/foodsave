@@ -15,7 +15,7 @@ return new class extends Migration
             $table->decimal('co2e_avoided_kg', 10, 2);
             $table->decimal('co2e_transport_kg', 10, 2);
             $table->unsignedBigInteger('economic_value_rp');
-            $table->decimal('distance_km', 6, 2);
+            $table->decimal('distance_km', 6, 2)->nullable();
             $table->timestamps();
         });
     }

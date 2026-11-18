@@ -31,6 +31,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/listing', [ProviderController::class, 'listings'])->name('listings.index');
         Route::get('/listing/buat', [ProviderController::class, 'create'])->name('listings.create');
         Route::get('/konfirmasi', [ProviderController::class, 'confirm'])->name('confirm');
+        Route::post('/klaim/{claim}/konfirmasi', [ProviderController::class, 'pickUp'])->name('pickUp');
+        Route::post('/klaim/{claim}/tolak', [ProviderController::class, 'cancelClaim'])->name('cancelClaim');
     });
 
     Route::prefix('admin')->name('admin.')->middleware('role:admin')->group(function () {
