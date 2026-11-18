@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --c-bg: 246 248 245;
+    --c-surface: 255 255 255;
+    --c-surface2: 238 242 236;
+    --c-line: 213 221 210;
+    --c-ink: 23 33 26;
+    --c-muted: 91 104 94;
+    --c-primary: 46 125 50;
+    --c-primarydark: 31 92 36;
+    --c-accent: 183 121 31;
+    --c-danger: 192 57 43;
+    --c-info: 31 111 181;
+}
+
+.dark {
+    --c-bg: 18 22 19;
+    --c-surface: 27 34 29;
+    --c-surface2: 35 43 37;
+    --c-line: 47 58 50;
+    --c-ink: 230 237 230;
+    --c-muted: 154 168 156;
+    --c-primary: 76 175 80;
+    --c-primarydark: 46 125 50;
+    --c-accent: 242 184 75;
+    --c-danger: 229 100 90;
+    --c-info: 90 169 230;
+}
+
+@layer base {
+    html {
+        color-scheme: light;
+    }
+
+    html.dark {
+        color-scheme: dark;
+    }
+
+    body {
+        @apply bg-bg text-ink font-sans antialiased;
+    }
+}
+
+@layer components {
+    .card {
+        @apply bg-surface border border-line rounded-card;
+    }
+
+    .field {
+        @apply w-full rounded-input border border-line bg-surface2 px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none;
+    }
+}
