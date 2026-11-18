@@ -32,6 +32,7 @@
                             <x-side-link href="{{ route('provider.dashboard') }}" :active="request()->routeIs('provider.dashboard')" icon="store">Dashboard</x-side-link>
                             <x-side-link href="{{ route('provider.listings.index') }}" :active="request()->routeIs('provider.listings.*')" icon="package">Kelola Listing</x-side-link>
                             <x-side-link href="{{ route('provider.confirm') }}" :active="request()->routeIs('provider.confirm')" icon="qr">Konfirmasi Ambil</x-side-link>
+                            <x-side-link href="{{ route('provider.profile') }}" :active="request()->routeIs('provider.profile')" icon="pin">Profil Usaha</x-side-link>
                         @endif
                         @if (auth()->user()->isAdmin())
                             <p class="px-3 pt-4 pb-1 text-xs uppercase tracking-wide text-muted">Admin</p>

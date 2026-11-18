@@ -5,12 +5,18 @@ namespace App\Http\Controllers;
 use App\Models\Claim;
 use App\Models\FoodCategory;
 use App\Models\FoodListing;
+use App\Models\ProviderProfile;
 use App\Services\ImpactCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ProviderController extends Controller
 {
+    // Pusat Kota Malang — default bila koordinat usaha tidak diisi.
+    private const DEFAULT_LAT = -7.9666;
+
+    private const DEFAULT_LNG = 112.6326;
+
     private function profile(Request $request)
     {
         return $request->user()->providerProfile;
@@ -64,7 +70,11 @@ class ProviderController extends Controller
     public function store(Request $request)
     {
         $profile = $this->profile($request);
-        abort_unless($profile, 403);
+
+        if (! $profile) {
+            return redirect()->route('provider.profile')
+                ->with('error', 'Lengkapi profil usaha terlebih dahulu sebelum menayangkan listing.');
+        }
 
         $data = $this->validateListing($request);
 
@@ -154,7 +164,7 @@ class ProviderController extends Controller
             'original_price' => ['nullable', 'integer', 'min:0'],
             'sale_price' => ['nullable', 'integer', 'min:0'],
             'pickup_start' => ['required', 'date'],
-            'pickup_end' => ['required', 'date', 'after:pickup_start'],
+            'pickup_end' => ['required', 'date', 'after:pickup_start', 'after:now'],
         ]);
     }
 
@@ -228,5 +238,38 @@ class ProviderController extends Controller
             $profile && $claim->listing && $claim->listing->provider_id === $profile->id,
             403
         );
+    }
+
+    public function editProfile(Request $request)
+    {
+        return view('provider.profile', [
+            'profile' => $this->profile($request),
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $data = $request->validate([
+            'business_name' => ['required', 'string', 'max:255'],
+            'business_type' => ['required', 'string', 'max:255'],
+            'address' => ['required', 'string', 'max:255'],
+            'district' => ['required', 'string', 'max:255'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        ProviderProfile::updateOrCreate(
+            ['user_id' => $request->user()->id],
+            [
+                'business_name' => $data['business_name'],
+                'business_type' => $data['business_type'],
+                'address' => $data['address'],
+                'district' => $data['district'],
+                'lat' => $data['lat'] ?? self::DEFAULT_LAT,
+                'lng' => $data['lng'] ?? self::DEFAULT_LNG,
+            ]
+        );
+
+        return redirect()->route('provider.profile')->with('success', 'Profil usaha disimpan.');
     }
 }

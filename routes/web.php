@@ -19,15 +19,21 @@ Route::middleware('auth')->group(function () {
     Route::post('/listing/{listing}/klaim', [ClaimController::class, 'store'])->name('claims.store');
 
     Route::get('/dashboard', function () {
-        return match (auth()->user()->role) {
-            'provider' => redirect()->route('provider.dashboard'),
-            'admin' => redirect()->route('admin.dashboard'),
+        $user = auth()->user();
+
+        return match (true) {
+            $user->isAdmin() => redirect()->route('admin.dashboard'),
+            $user->isProvider() => $user->providerProfile
+                ? redirect()->route('provider.dashboard')
+                : redirect()->route('provider.profile'),
             default => redirect()->route('home'),
         };
     })->name('dashboard');
 
     Route::prefix('provider')->name('provider.')->middleware('role:provider')->group(function () {
         Route::get('/', [ProviderController::class, 'dashboard'])->name('dashboard');
+        Route::get('/profil', [ProviderController::class, 'editProfile'])->name('profile');
+        Route::put('/profil', [ProviderController::class, 'updateProfile'])->name('profile.update');
         Route::get('/listing', [ProviderController::class, 'listings'])->name('listings.index');
         Route::get('/listing/buat', [ProviderController::class, 'create'])->name('listings.create');
         Route::post('/listing', [ProviderController::class, 'store'])->name('listings.store');

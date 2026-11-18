@@ -25,8 +25,18 @@ class ListingExpiry
             ->where('pickup_end', '<', $now)
             ->update(['status' => 'expired', 'updated_at' => $now]);
 
-        Claim::where('status', 'booked')
+        $expiredClaims = Claim::where('status', 'booked')
             ->whereHas('listing', fn ($q) => $q->where('pickup_end', '<', $now))
-            ->update(['status' => 'expired', 'updated_at' => $now]);
+            ->get();
+
+        foreach ($expiredClaims as $claim) {
+            $claim->status = 'expired';
+            $claim->save();
+        }
+
+        // Lepas stok yang direservasi klaim kedaluwarsa kembali ke listing.
+        foreach ($expiredClaims->groupBy('listing_id') as $listingId => $claims) {
+            FoodListing::whereKey($listingId)->increment('qty_available', $claims->sum('qty'));
+        }
     }
 }
