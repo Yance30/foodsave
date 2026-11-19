@@ -8,7 +8,7 @@
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?logo=php&logoColor=white)](https://www.php.net)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 [![Alpine.js](https://img.shields.io/badge/Alpine.js-3-8BC0D0?logo=alpinedotjs&logoColor=white)](https://alpinejs.dev)
-[![Tests](https://img.shields.io/badge/tests-44%20passed-2E7D32)](#-pengujian)
+[![Tests](https://github.com/Yance30/foodsave/actions/workflows/tests.yml/badge.svg)](https://github.com/Yance30/foodsave/actions/workflows/tests.yml)
 
 [**Demo langsung**](https://foodsave.infinityfree.me) · [Fitur](#-fitur-utama) · [Cara kerja](#-cara-kerja) · [Instalasi](#-instalasi-lokal) · [Pengujian](#-pengujian)
 
@@ -34,9 +34,10 @@ Proyek ini dikembangkan sebagai **Proyek Akhir Sistem Informasi Bisnis, Fakultas
 | Detail listing dengan peta & rute | Tayangkan surplus dengan pratinjau kartu langsung | Kelola pengguna & peran |
 | Klaim maks. 2 porsi, kode `FS-XXXX` + hitung mundur | Simpan draf, tutup, tayangkan ulang listing | Kelola faktor emisi (sumber & tahun) |
 | Riwayat klaim & status kedaluwarsa | Konfirmasi pengambilan dengan input kode | Dashboard platform & grafik bulanan |
-| Dashboard dampak pribadi, grafik mingguan, lencana | Statistik harian & bulanan usaha | |
+| Dashboard dampak pribadi, grafik mingguan, lencana | Statistik harian & bulanan usaha | Nonaktifkan/aktifkan akun (riwayat tetap tersimpan) |
+| | | Kata sandi sementara & tombol **Segarkan data demo** |
 
-**Lainnya:** mode gelap (default) & terang, responsif (desktop · tablet · mobile dengan tab bar), antarmuka berbahasa Indonesia, foto otomatis dikompres ke WebP ≤ 800 px.
+**Lainnya:** animasi masuk & sambutan setelah login, halaman error bergaya FoodSave (403/404/419/429/500/503), banner saat koneksi terputus, skeleton saat memuat, mode gelap (default) & terang, responsif (desktop · tablet · mobile dengan tab bar), antarmuka berbahasa Indonesia, foto otomatis dikompres ke WebP ≤ 800 px.
 
 ## 🔄 Cara kerja
 
@@ -152,7 +153,7 @@ Buka `http://127.0.0.1:8000`. Untuk pengembangan dengan hot reload, jalankan `np
 php artisan test
 ```
 
-**44 tes · 177 asersi** lulus. Pengujian fungsional *black-box* F-01–F-11 (`tests/Feature/FunctionalBlackBoxTest.php`) dipetakan ke Tabel 4.7 laporan — lihat [`docs/tabel-4-7.md`](docs/tabel-4-7.md).
+**51 tes · 208 asersi** lulus, dijalankan otomatis oleh GitHub Actions di setiap push (termasuk cek gaya kode Laravel Pint). Pengujian fungsional *black-box* F-01–F-11 (`tests/Feature/FunctionalBlackBoxTest.php`) dipetakan ke Tabel 4.7 laporan — lihat [`docs/tabel-4-7.md`](docs/tabel-4-7.md).
 
 | ID | Skenario | Hasil yang diharapkan |
 |---|---|---|
@@ -186,8 +187,9 @@ htdocs/
 
 1. Jalankan `npm run build` dan `composer install --no-dev --optimize-autoloader`.
 2. Unggah struktur di atas ke `htdocs`, isi `app-core/.env` (`APP_ENV=production`, `APP_DEBUG=false`, kredensial MySQL dari panel hosting).
-3. Impor skema ke MySQL melalui phpMyAdmin.
-4. Untuk pembaruan, unggah hanya `app-core/{app,config,lang,resources,routes,…}` dan `build/` **tanpa** `.env` dan `vendor/`, lalu kosongkan `app-core/storage/framework/views/`.
+3. Impor skema ke MySQL melalui phpMyAdmin. Perubahan skema setelahnya ada di [`docs/sql/`](docs/sql) — jalankan sekali di phpMyAdmin (hosting tidak bisa menjalankan `php artisan migrate`).
+4. Masuk sebagai admin lalu klik **Segarkan data demo** di dashboard untuk memasang foto demo dan menggeser jam ambil listing demo ke hari ini.
+5. Untuk pembaruan, unggah hanya `app-core/{app,config,lang,resources,routes,…}` dan `build/` **tanpa** `.env` dan `vendor/`, lalu kosongkan `app-core/storage/framework/views/`.
 
 ## 📁 Struktur proyek
 
@@ -212,7 +214,7 @@ docs/                     # tabel pengujian & screenshot
 - Lokasi penerima & jarak (urutan "Terdekat", filter radius, emisi transportasi)
 - Notifikasi dalam aplikasi untuk klaim baru dan status verifikasi
 - Beberapa foto per listing dan unggah dokumen verifikasi usaha
-- Pembatalan klaim oleh penerima dan status nonaktif pengguna
+- Pembatalan klaim oleh penerima
 
 ---
 

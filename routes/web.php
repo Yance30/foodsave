@@ -20,7 +20,7 @@ Route::middleware('auth')->group(function () {
     // Klaim hanya untuk akun penerima — penyedia/admin tidak bisa mengklaim (mencegah dampak palsu).
     Route::middleware('role:receiver')->group(function () {
         Route::get('/listing/{listing}/klaim', [ClaimController::class, 'create'])->name('claims.create');
-        Route::post('/listing/{listing}/klaim', [ClaimController::class, 'store'])->name('claims.store');
+        Route::post('/listing/{listing}/klaim', [ClaimController::class, 'store'])->middleware('throttle:20,1')->name('claims.store');
     });
 
     Route::get('/dashboard', function () {
@@ -48,8 +48,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/listing/{listing}/tutup', [ProviderController::class, 'close'])->name('listings.close');
         Route::post('/listing/{listing}/tayangkan', [ProviderController::class, 'publish'])->name('listings.publish');
         Route::get('/konfirmasi', [ProviderController::class, 'confirm'])->name('confirm');
-        Route::post('/konfirmasi', [ProviderController::class, 'pickUpByCode'])->name('confirm.code');
-        Route::post('/klaim/{claim}/konfirmasi', [ProviderController::class, 'pickUp'])->name('pickUp');
+        // Batasi tebakan kode FS-XXXX.
+        Route::post('/konfirmasi', [ProviderController::class, 'pickUpByCode'])->middleware('throttle:10,1')->name('confirm.code');
+        Route::post('/klaim/{claim}/konfirmasi', [ProviderController::class, 'pickUp'])->middleware('throttle:10,1')->name('pickUp');
         Route::post('/klaim/{claim}/tolak', [ProviderController::class, 'cancelClaim'])->name('cancelClaim');
     });
 
@@ -63,6 +64,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/verifikasi/{user}/tolak', [AdminController::class, 'rejectProvider'])->name('verifications.reject');
         Route::put('/pengguna/{user}', [AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/pengguna/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+        Route::post('/pengguna/{id}/aktifkan', [AdminController::class, 'restoreUser'])->whereNumber('id')->name('users.restore');
+        Route::post('/demo/segarkan', [AdminController::class, 'refreshDemo'])->name('demo.refresh');
         Route::post('/faktor-emisi', [AdminController::class, 'storeFactor'])->name('factors.store');
         Route::put('/faktor-emisi/{factor}', [AdminController::class, 'updateFactor'])->name('factors.update');
         Route::delete('/faktor-emisi/{factor}', [AdminController::class, 'destroyFactor'])->name('factors.destroy');

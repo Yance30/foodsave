@@ -50,7 +50,8 @@ class ProfileController extends Controller
 
         Auth::logout();
 
-        $user->delete();
+        // Hapus akun oleh pemilik = permanen (sesuai teks di halaman profil).
+        $user->forceDelete();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

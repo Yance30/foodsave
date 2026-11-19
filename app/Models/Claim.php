@@ -35,7 +35,7 @@ class Claim extends Model
 
     public function receiver(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'receiver_id');
+        return $this->belongsTo(User::class, 'receiver_id')->withTrashed();
     }
 
     public function impactLog(): HasOne

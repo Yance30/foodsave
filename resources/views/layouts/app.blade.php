@@ -10,6 +10,7 @@
 
         <title>{{ isset($title) ? $title.' · ' : '' }}FoodSave</title>
         <meta name="description" content="{{ $description ?? 'FoodSave — platform penyelamatan makanan berlebih di Kota Malang. Hubungkan penyedia makanan dengan penerima untuk mengurangi food waste dan emisi CO₂e.' }}">
+        @include('partials.head-meta')
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -113,6 +114,7 @@
             <x-tab-link href="{{ auth()->check() ? route('profile.edit') : route('login') }}" :active="request()->routeIs('profile.*', 'login')" icon="user">Profil</x-tab-link>
         </nav>
 
+        <x-offline-banner />
         <x-theme-script />
     </body>
 </html>

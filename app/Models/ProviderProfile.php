@@ -24,6 +24,7 @@ class ProviderProfile extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        // withTrashed: listing/riwayat tetap menampilkan nama penyedia yang dinonaktifkan.
+        return $this->belongsTo(User::class)->withTrashed();
     }
 }

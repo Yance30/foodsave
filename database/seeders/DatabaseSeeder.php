@@ -9,6 +9,7 @@ use App\Models\FoodListing;
 use App\Models\ImpactLog;
 use App\Models\ProviderProfile;
 use App\Models\User;
+use App\Services\DemoData;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -182,5 +183,10 @@ class DatabaseSeeder extends Seeder
             'distance_km' => 2.1,
             'claimed_at' => now()->subDays(2),
         ]);
+
+        // Foto demo (database/seeders/demo-images) → public/uploads/listings.
+        foreach ((new DemoData)->installImages() as $title => $path) {
+            FoodListing::where('title', $title)->update(['image_path' => $path]);
+        }
     }
 }

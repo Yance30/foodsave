@@ -4,6 +4,7 @@ namespace App\View\Components;
 
 use App\Models\Claim;
 use App\Models\ImpactLog;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Component;
 use Illuminate\View\View;
@@ -37,7 +38,7 @@ class PanelLayout extends Component
         }
 
         if ($user?->isAdmin()) {
-            $waiting = \App\Models\User::where('role', 'provider')->where('is_verified', false)->count();
+            $waiting = User::where('role', 'provider')->where('is_verified', false)->count();
         }
 
         return view('layouts.panel', [

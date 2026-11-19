@@ -8,7 +8,10 @@
         $filterCount = (request('scheme') ? 1 : 0) + count(array_filter($selectedCats)) + (request('sort') === 'price' ? 1 : 0);
     @endphp
 
-    <div class="space-y-6">
+    <div class="space-y-6" x-data="{ loading: false }"
+        x-on:submit="loading = true"
+        x-on:click="const a = $event.target.closest('a'); if (a && a.origin === location.origin && a.pathname === '/' && ! $event.ctrlKey && ! $event.metaKey) loading = true"
+        x-on:pageshow.window="loading = false">
         {{-- Hero (Figma R1: sapaan + Dampak komunitas) --}}
         <section class="grid gap-5 rounded-[16px] bg-hero p-5 md:grid-cols-[1fr_auto] md:items-center md:p-6 lg:p-7">
             <div>
@@ -145,8 +148,24 @@
                 {{ request('q') ? 'Hasil untuk “'.request('q').'”' : 'Tersedia sekarang' }}
             </h2>
 
+            {{-- Figma: State-Loading-Skeleton — tampil saat mencari/memfilter/pindah halaman --}}
+            <div x-show="loading" x-cloak class="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-4" aria-hidden="true">
+                @for ($i = 0; $i < 8; $i++)
+                    <div class="flex animate-pulse gap-3 rounded-card border border-line bg-surface p-3 md:flex-col md:gap-0 md:p-0">
+                        <div class="h-[78px] w-[104px] shrink-0 rounded-[10px] bg-surface2 md:aspect-[16/10] md:h-auto md:w-full md:rounded-none"></div>
+                        <div class="flex-1 space-y-2.5 md:p-3.5">
+                            <div class="h-4 w-3/4 rounded bg-surface2"></div>
+                            <div class="h-3 w-1/2 rounded bg-surface2"></div>
+                            <div class="h-3 w-2/3 rounded bg-surface2"></div>
+                            <div class="flex justify-between pt-1"><div class="h-4 w-16 rounded bg-surface2"></div><div class="h-5 w-16 rounded bg-surface2"></div></div>
+                        </div>
+                    </div>
+                @endfor
+            </div>
+            <p x-show="loading" x-cloak class="sr-only" role="status">Memuat listing…</p>
+
             @if ($listings->count())
-                <div class="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-4">
+                <div x-show="! loading" class="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-4">
                     @foreach ($listings as $listing)
                         <x-listing-card :listing="$listing" />
                     @endforeach

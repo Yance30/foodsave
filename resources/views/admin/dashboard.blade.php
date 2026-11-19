@@ -5,6 +5,14 @@
 
 <x-panel-layout heading="Dashboard" :subheading="'Ringkasan platform FoodSave · '.now()->locale('id')->translatedFormat('F Y')">
     <x-slot name="title">Dashboard admin</x-slot>
+    @if ($hasDemo)
+        <x-slot name="actions">
+            <form method="POST" action="{{ route('admin.demo.refresh') }}" class="shrink-0">
+                @csrf
+                <x-button variant="secondary" title="Pasang foto demo dan geser jam ambil listing akun @foodsave.test ke hari ini"><x-icon name="refresh" class="h-4 w-4" /> <span class="hidden sm:inline">Segarkan data demo</span></x-button>
+            </form>
+        </x-slot>
+    @endif
 
     <div class="space-y-5">
         <div class="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">

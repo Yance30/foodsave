@@ -10,6 +10,7 @@
 
         <title>{{ isset($title) ? $title.' · ' : '' }}FoodSave</title>
         <meta name="description" content="{{ $description ?? 'Panel FoodSave untuk penyedia makanan surplus dan admin.' }}">
+        @include('partials.head-meta')
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
@@ -120,6 +121,7 @@
             </div>
         </div>
 
+        <x-offline-banner />
         <x-theme-script />
     </body>
 </html>

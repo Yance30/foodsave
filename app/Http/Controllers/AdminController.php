@@ -7,7 +7,9 @@ use App\Models\EmissionFactor;
 use App\Models\FoodListing;
 use App\Models\ImpactLog;
 use App\Models\User;
+use App\Services\DemoData;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -40,6 +42,7 @@ class AdminController extends Controller
             'co2e' => (float) ImpactLog::sum('co2e_avoided_kg'),
             'months' => $months,
             'latest' => FoodListing::with('provider')->latest()->limit(5)->get(),
+            'hasDemo' => app(DemoData::class)->hasDemoListings(),
         ]);
     }
 
@@ -66,11 +69,12 @@ class AdminController extends Controller
     {
         $q = trim((string) $request->query('q'));
 
-        $users = User::query()
+        $users = User::withTrashed()
             ->with('providerProfile')
             ->withCount(['claims as claims_done' => fn ($c) => $c->where('status', 'picked_up')])
             ->when($q, fn ($query) => $query->where(fn ($w) => $w->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%")))
             ->when($request->query('peran'), fn ($query, $role) => $query->where('role', $role))
+            ->when($request->query('status') === 'nonaktif', fn ($query) => $query->onlyTrashed())
             ->orderBy('name')
             ->paginate(10)
             ->withQueryString();
@@ -111,9 +115,9 @@ class AdminController extends Controller
         abort_unless($user->role === 'provider', 404);
         abort_if($user->id === $request->user()->id, 403, 'Tidak bisa menolak akun sendiri.');
 
-        $user->delete();
+        $this->deactivate($user);
 
-        return back()->with('success', 'Penyedia ditolak dan akunnya dihapus.');
+        return back()->with('success', 'Pengajuan ditolak. Akun penyedia dinonaktifkan.');
     }
 
     public function updateUser(Request $request, User $user)
@@ -122,23 +126,68 @@ class AdminController extends Controller
 
         $data = $request->validate([
             'role' => ['required', 'in:receiver,provider,admin'],
+            // Kata sandi sementara (alur "Lupa kata sandi" tanpa email).
+            'new_password' => ['nullable', 'string', 'min:8', 'max:72'],
         ]);
 
-        $user->update([
+        $user->update(array_filter([
             'role' => $data['role'],
             'is_verified' => $request->boolean('is_verified'),
-        ]);
+            'password' => $data['new_password'] ?? null,
+        ], fn ($v) => $v !== null));
 
-        return back()->with('success', 'Pengguna diperbarui.');
+        return back()->with('success', $data['new_password'] ?? null
+            ? 'Pengguna diperbarui. Berikan kata sandi sementara ke '.$user->name.' dan minta segera menggantinya.'
+            : 'Pengguna diperbarui.');
     }
 
     public function destroyUser(Request $request, User $user)
     {
-        abort_if($user->id === $request->user()->id, 403, 'Tidak bisa menghapus akun sendiri.');
+        abort_if($user->id === $request->user()->id, 403, 'Tidak bisa menonaktifkan akun sendiri.');
 
-        $user->delete();
+        $this->deactivate($user);
 
-        return back()->with('success', 'Pengguna dihapus.');
+        return back()->with('success', $user->name.' dinonaktifkan. Riwayat klaim & dampaknya tetap tersimpan.');
+    }
+
+    /** Tombol "Segarkan data demo": foto + jam ambil listing akun demo digeser ke hari ini. */
+    public function refreshDemo(DemoData $demo)
+    {
+        $n = $demo->refresh();
+
+        return back()->with('success', $n
+            ? "{$n} listing demo disegarkan — foto terpasang dan jam ambil digeser ke hari ini."
+            : 'Tidak ada listing demo (akun @foodsave.test) untuk disegarkan.');
+    }
+
+    public function restoreUser(int $id)
+    {
+        $user = User::onlyTrashed()->findOrFail($id);
+        $user->restore();
+
+        return back()->with('success', $user->name.' diaktifkan kembali.');
+    }
+
+    /**
+     * Soft delete: akun tidak bisa masuk, listing aktif ditutup, klaim booked dibatalkan
+     * (stok dikembalikan). Klaim selesai & impact log tetap utuh.
+     */
+    private function deactivate(User $user): void
+    {
+        DB::transaction(function () use ($user) {
+            if ($profileId = $user->providerProfile?->id) {
+                FoodListing::where('provider_id', $profileId)
+                    ->whereIn('status', ['active', 'draft'])
+                    ->update(['status' => 'closed']);
+            }
+
+            $user->claims()->where('status', 'booked')->get()->each(function (Claim $claim) {
+                $claim->update(['status' => 'cancelled']);
+                FoodListing::whereKey($claim->listing_id)->increment('qty_available', $claim->qty);
+            });
+
+            $user->delete();
+        });
     }
 
     public function storeFactor(Request $request)

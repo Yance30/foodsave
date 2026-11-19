@@ -1,31 +1,23 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
-    </div>
+    <x-slot name="title">Verifikasi email</x-slot>
+
+    <h2 class="text-[28px] font-bold leading-[34px]">Verifikasi email</h2>
+    <p class="mt-2 text-sm text-muted">Terima kasih sudah mendaftar! Klik tautan yang kami kirim ke emailmu untuk memverifikasi akun. Belum menerima email? Kami bisa mengirim ulang.</p>
 
     @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
-        </div>
+        <p class="mt-4 flex items-start gap-2 rounded-card bg-primarysoft p-3.5 text-sm text-primary" role="status">
+            <x-icon name="check-circle" class="mt-0.5 h-4 w-4 shrink-0" /> Tautan verifikasi baru sudah dikirim ke email yang kamu daftarkan.
+        </p>
     @endif
 
-    <div class="mt-4 flex items-center justify-between">
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
         <form method="POST" action="{{ route('verification.send') }}">
             @csrf
-
-            <div>
-                <x-primary-button>
-                    {{ __('Resend Verification Email') }}
-                </x-primary-button>
-            </div>
+            <x-primary-button>Kirim ulang email verifikasi</x-primary-button>
         </form>
-
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-
-            <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{ __('Log Out') }}
-            </button>
+            <button type="submit" class="text-sm font-semibold text-muted hover:text-ink">Keluar</button>
         </form>
     </div>
 </x-guest-layout>

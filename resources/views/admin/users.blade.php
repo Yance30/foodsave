@@ -7,10 +7,11 @@
 
     <div class="space-y-4">
         <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Filter peran">
-            <x-chip :href="route('admin.users', request()->except(['peran', 'page']))" :active="! request('peran')">Semua</x-chip>
+            <x-chip :href="route('admin.users', request()->except(['peran', 'status', 'page']))" :active="! request('peran') && ! request('status')">Semua</x-chip>
             @foreach ($roleLabel as $value => $label)
-                <x-chip :href="route('admin.users', array_merge(request()->except('page'), ['peran' => $value]))" :active="request('peran') === $value">{{ $label }}</x-chip>
+                <x-chip :href="route('admin.users', array_merge(request()->except(['page', 'status']), ['peran' => $value]))" :active="request('peran') === $value">{{ $label }}</x-chip>
             @endforeach
+            <x-chip :href="route('admin.users', array_merge(request()->except(['page', 'peran']), ['status' => 'nonaktif']))" :active="request('status') === 'nonaktif'">Nonaktif</x-chip>
         </div>
 
         <section class="overflow-hidden rounded-card border border-line bg-surface">
@@ -22,7 +23,7 @@
                     <tbody class="divide-y divide-line">
                         @forelse ($users as $u)
                             @php $self = $u->id === auth()->id(); @endphp
-                            <tr x-data="{ edit: false }">
+                            <tr x-data="{ edit: false }" class="{{ $u->trashed() ? 'opacity-60' : '' }}">
                                 <td class="px-5 py-3">
                                     <span class="flex items-center gap-3">
                                         <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full {{ $u->isAdmin() ? 'bg-primary text-onprimary' : 'bg-surface2' }} text-sm font-semibold">{{ strtoupper(substr($u->name, 0, 1)) }}</span>
@@ -38,7 +39,9 @@
                                     {{ match ($u->role) { 'provider' => ($listingCounts[$u->id] ?? 0).' listing', 'receiver' => $u->claims_done.' klaim', default => '—' } }}
                                 </td>
                                 <td class="px-4 py-3">
-                                    @if ($u->isProvider())
+                                    @if ($u->trashed())
+                                        <x-badge type="danger" icon="x-circle">Nonaktif</x-badge>
+                                    @elseif ($u->isProvider())
                                         @if ($u->is_verified)
                                             <x-badge type="verified" icon="badge-check">Terverifikasi</x-badge>
                                         @else
@@ -51,12 +54,17 @@
                                 <td class="px-5 py-3">
                                     @if ($self)
                                         <p class="text-right text-muted">—</p>
+                                    @elseif ($u->trashed())
+                                        <form method="POST" action="{{ route('admin.users.restore', $u->id) }}" class="flex justify-end">
+                                            @csrf
+                                            <x-button variant="secondary" size="sm"><x-icon name="refresh" class="h-3.5 w-3.5" /> Aktifkan</x-button>
+                                        </form>
                                     @else
                                         <div class="relative flex justify-end gap-2">
                                             <x-button type="button" variant="secondary" size="sm" x-on:click="edit = !edit" x-bind:aria-expanded="edit"><x-icon name="edit" class="h-3.5 w-3.5" /> Ubah</x-button>
-                                            <form method="POST" action="{{ route('admin.users.destroy', $u) }}" x-on:submit="if (! confirm('Hapus akun {{ addslashes($u->name) }}? Data klaim/listing ikut terhapus.')) $event.preventDefault()">
+                                            <form method="POST" action="{{ route('admin.users.destroy', $u) }}" x-on:submit="if (! confirm('Nonaktifkan akun {{ addslashes($u->name) }}? Akun tidak bisa masuk, listing aktif ditutup, dan klaim yang menunggu dibatalkan. Riwayat dampak tetap tersimpan.')) $event.preventDefault()">
                                                 @csrf @method('DELETE')
-                                                <button type="submit" class="grid h-9 w-9 place-items-center rounded-btn text-muted hover:bg-dangersoft hover:text-danger" aria-label="Hapus {{ $u->name }}"><x-icon name="trash" class="h-4 w-4" /></button>
+                                                <x-button variant="danger-soft" size="sm">Nonaktifkan</x-button>
                                             </form>
 
                                             <form method="POST" action="{{ route('admin.users.update', $u) }}" x-show="edit" x-cloak x-on:click.outside="edit = false"
@@ -75,6 +83,11 @@
                                                     <input type="checkbox" name="is_verified" value="1" @checked($u->is_verified) class="h-[18px] w-[18px] rounded border-line bg-surface2 text-primary focus:ring-primary/40">
                                                     Terverifikasi
                                                 </label>
+                                                <div class="space-y-2 border-t border-line pt-3">
+                                                    <x-input-label for="pw-{{ $u->id }}" value="Kata sandi sementara (opsional)" />
+                                                    <x-text-input id="pw-{{ $u->id }}" name="new_password" type="text" minlength="8" autocomplete="off" placeholder="Min. 8 karakter" />
+                                                    <p class="text-xs text-muted">Untuk pengguna yang lupa kata sandi.</p>
+                                                </div>
                                                 <x-button class="w-full" size="sm">Simpan</x-button>
                                             </form>
                                         </div>
