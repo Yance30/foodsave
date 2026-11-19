@@ -9,6 +9,7 @@
         </script>
 
         <title>{{ isset($title) ? $title.' · ' : '' }}FoodSave</title>
+        <meta name="description" content="{{ $description ?? 'FoodSave — platform penyelamatan makanan berlebih di Kota Malang. Hubungkan penyedia makanan dengan penerima untuk mengurangi food waste dan emisi CO₂e.' }}">
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
