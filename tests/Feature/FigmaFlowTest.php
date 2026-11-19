@@ -128,6 +128,22 @@ class FigmaFlowTest extends TestCase
         ])->assertSessionHasErrors('sale_price');
     }
 
+    public function test_welcome_animation_shows_once_after_login(): void
+    {
+        $listing = $this->listing();
+        $provider = $listing->provider->user;
+        $provider->update(['password' => 'rahasia123']);
+
+        $this->followingRedirects()
+            ->post('/login', ['email' => $provider->email, 'password' => 'rahasia123'])
+            ->assertOk()
+            ->assertSee('Selamat datang, '.$listing->provider->business_name.'!')
+            ->assertSee('Menyiapkan panel penyedia');
+
+        // Halaman berikutnya tanpa sambutan lagi.
+        $this->get('/provider/listing')->assertOk()->assertDontSee('Selamat datang,');
+    }
+
     public function test_all_main_pages_render(): void
     {
         $listing = $this->listing();

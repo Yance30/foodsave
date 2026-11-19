@@ -1,11 +1,22 @@
 <!DOCTYPE html>
-<html lang="id" class="dark">
+<html lang="id" class="dark" data-form-errors="{{ $errors->any() ? 1 : 0 }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <script>
             document.documentElement.classList.toggle('dark', (localStorage.getItem('theme') || 'dark') === 'dark');
+            // Splash hanya sekali per sesi browser, tidak saat form kembali dengan error.
+            (function () {
+                try {
+                    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    var root = document.documentElement;
+                    if (!reduce && root.dataset.formErrors !== '1' && !sessionStorage.getItem('fs-splash')) {
+                        root.classList.add('fs-has-splash');
+                        sessionStorage.setItem('fs-splash', '1');
+                    }
+                } catch (e) {}
+            })();
         </script>
 
         <title>{{ isset($title) ? $title.' · ' : '' }}FoodSave</title>
@@ -14,9 +25,26 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
+        {{-- Splash masuk: logo → nama → tagline → progress, lalu memudar --}}
+        <div id="fs-splash" class="fs-splash fixed inset-0 z-50 grid place-items-center bg-bg" aria-hidden="true">
+            <div class="flex flex-col items-center text-center">
+                <div class="relative grid h-24 w-24 place-items-center">
+                    <span class="fs-ring absolute inset-0 rounded-[28px] bg-primary/30"></span>
+                    <span class="fs-pop relative grid h-24 w-24 place-items-center rounded-[28px] bg-primary text-onprimary shadow-2xl shadow-primary/30">
+                        <x-icon name="sprout" class="fs-draw h-12 w-12" />
+                    </span>
+                </div>
+                <p class="fs-enter-up mt-6 text-[32px] font-bold tracking-tight" style="--d: .35s">FoodSave</p>
+                <p class="fs-enter-up mt-1 text-sm text-muted" style="--d: .55s">Selamatkan makanan surplus di Kota Malang</p>
+                <div class="fs-enter-up mt-8 h-1 w-40 overflow-hidden rounded-full bg-surface2" style="--d: .2s">
+                    <div class="fs-progress h-full w-full rounded-full bg-primary"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid min-h-screen lg:grid-cols-2">
             {{-- Panel cerita --}}
-            <section class="hidden flex-col bg-hero p-14 lg:flex">
+            <section class="fs-enter-left hidden flex-col bg-hero p-14 lg:flex">
                 <a href="{{ route('home') }}" class="flex items-center gap-3">
                     <x-application-logo class="h-10 w-10" />
                     <span class="text-xl font-semibold">FoodSave</span>
@@ -61,7 +89,7 @@
                     <x-application-logo class="h-9 w-9" />
                     <span class="text-lg font-semibold">FoodSave</span>
                 </a>
-                <div class="mx-auto w-full max-w-[400px]">
+                <div class="fs-enter-up mx-auto w-full max-w-[400px]" style="--d: .15s">
                     {{ $slot }}
                 </div>
             </main>

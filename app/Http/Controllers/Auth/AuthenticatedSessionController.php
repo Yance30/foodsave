@@ -28,6 +28,9 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Animasi "Selamat datang" di halaman pertama setelah masuk (diambil sekali oleh <x-welcome-splash>).
+        $request->session()->put('welcome', true);
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

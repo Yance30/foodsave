@@ -14,8 +14,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
+        <x-welcome-splash />
         @php($user = auth()->user())
-        <div class="flex min-h-screen flex-col">
+        <div class="fs-page flex min-h-screen flex-col">
             {{-- Top navigation (Figma: Nav/Top · Desktop) --}}
             <header class="sticky top-0 z-30 border-b border-line bg-bg/95 backdrop-blur">
                 <div class="mx-auto flex h-16 max-w-content items-center gap-6 px-4 md:h-[72px] md:px-8">

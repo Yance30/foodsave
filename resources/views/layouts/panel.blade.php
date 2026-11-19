@@ -14,8 +14,9 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
+        <x-welcome-splash />
         @php($isAdmin = $panelUser->isAdmin())
-        <div x-data="{ menu: false }" class="min-h-screen lg:flex">
+        <div x-data="{ menu: false }" class="fs-page min-h-screen lg:flex">
             {{-- Sidebar (Figma: Sidebar · 264) --}}
             <aside :class="menu ? 'translate-x-0' : '-translate-x-full'"
                 class="fixed inset-y-0 left-0 z-40 flex w-[264px] -translate-x-full flex-col gap-6 border-r border-line bg-surface px-4 py-6 transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
