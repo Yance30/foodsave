@@ -13,33 +13,88 @@ class AdminController extends Controller
 {
     public function dashboard()
     {
+        $monthStart = now()->startOfMonth();
+        $lastMonth = now()->subMonthNoOverflow()->startOfMonth();
+
+        // Grafik 6 bulan terakhir (kg tersalur).
+        $months = collect(range(5, 0))->map(function (int $ago) {
+            $start = now()->startOfMonth()->subMonthsNoOverflow($ago);
+
+            return [
+                'label' => $start->locale('id')->translatedFormat('M'),
+                'kg' => (float) ImpactLog::whereBetween('created_at', [$start, $start->copy()->endOfMonth()])->sum('weight_kg'),
+            ];
+        });
+
+        $listingsThisMonth = FoodListing::where('created_at', '>=', $monthStart)->count();
+        $listingsLastMonth = FoodListing::whereBetween('created_at', [$lastMonth, $monthStart])->count();
+
         return view('admin.dashboard', [
             'users' => User::count(),
-            'providersPending' => User::where('role', 'provider')->where('is_verified', false)->count(),
-            'listings' => FoodListing::count(),
-            'listingsActive' => FoodListing::where('status', 'active')->count(),
-            'claims' => Claim::count(),
+            'usersThisMonth' => User::where('created_at', '>=', $monthStart)->count(),
+            'providersVerified' => User::where('role', 'provider')->where('is_verified', true)->count(),
+            'pending' => User::with('providerProfile')->where('role', 'provider')->where('is_verified', false)->latest()->get(),
+            'listingsThisMonth' => $listingsThisMonth,
+            'listingsDelta' => $listingsLastMonth ? (int) round(($listingsThisMonth - $listingsLastMonth) / $listingsLastMonth * 100) : null,
             'weight' => (float) ImpactLog::sum('weight_kg'),
             'co2e' => (float) ImpactLog::sum('co2e_avoided_kg'),
+            'months' => $months,
+            'latest' => FoodListing::with('provider')->latest()->limit(5)->get(),
         ]);
     }
 
-    public function verifications()
+    public function verifications(Request $request)
     {
+        $providers = User::with('providerProfile')
+            ->where('role', 'provider')
+            ->orderBy('is_verified')
+            ->latest()
+            ->get();
+
+        $selected = $request->query('id')
+            ? $providers->firstWhere('id', (int) $request->query('id'))
+            : $providers->firstWhere('is_verified', false);
+
         return view('admin.verifications', [
-            'pending' => User::with('providerProfile')->where('role', 'provider')->where('is_verified', false)->get(),
-            'verified' => User::with('providerProfile')->where('role', 'provider')->where('is_verified', true)->get(),
+            'providers' => $providers,
+            'selected' => $selected,
+            'pendingCount' => $providers->where('is_verified', false)->count(),
         ]);
     }
 
-    public function users()
+    public function users(Request $request)
     {
-        return view('admin.users', ['users' => User::orderBy('name')->get()]);
+        $q = trim((string) $request->query('q'));
+
+        $users = User::query()
+            ->with('providerProfile')
+            ->withCount(['claims as claims_done' => fn ($c) => $c->where('status', 'picked_up')])
+            ->when($q, fn ($query) => $query->where(fn ($w) => $w->where('name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%")))
+            ->when($request->query('peran'), fn ($query, $role) => $query->where('role', $role))
+            ->orderBy('name')
+            ->paginate(10)
+            ->withQueryString();
+
+        $listingCounts = FoodListing::selectRaw('provider_profiles.user_id, COUNT(*) as n')
+            ->join('provider_profiles', 'provider_profiles.id', '=', 'food_listings.provider_id')
+            ->groupBy('provider_profiles.user_id')
+            ->pluck('n', 'user_id');
+
+        return view('admin.users', [
+            'users' => $users,
+            'listingCounts' => $listingCounts,
+            'counts' => User::selectRaw('role, COUNT(*) as n')->groupBy('role')->pluck('n', 'role'),
+        ]);
     }
 
-    public function factors()
+    public function factors(Request $request)
     {
-        return view('admin.factors', ['factors' => EmissionFactor::withCount('categories')->get()]);
+        $factors = EmissionFactor::withCount('categories')->orderBy('name')->get();
+
+        return view('admin.factors', [
+            'factors' => $factors,
+            'editing' => $request->query('edit') ? $factors->firstWhere('id', (int) $request->query('edit')) : null,
+        ]);
     }
 
     public function approveProvider(User $user)
@@ -91,8 +146,8 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'kg_co2e_per_kg' => ['required', 'numeric', 'min:0'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
+            'source' => ['required', 'string', 'max:255'],
+            'year' => ['required', 'integer', 'min:1900', 'max:2100'],
         ]);
 
         EmissionFactor::create($data);
@@ -105,8 +160,8 @@ class AdminController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'kg_co2e_per_kg' => ['required', 'numeric', 'min:0'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
+            'source' => ['required', 'string', 'max:255'],
+            'year' => ['required', 'integer', 'min:1900', 'max:2100'],
         ]);
 
         $factor->update($data);

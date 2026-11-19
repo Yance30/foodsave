@@ -14,6 +14,14 @@
     --c-accent: 183 121 31;
     --c-danger: 192 57 43;
     --c-info: 31 111 181;
+    --c-onprimary: 255 255 255;
+    --c-primarysoft: 226 240 226;
+    --c-accenttext: 138 90 18;
+    --c-accentsoft: 251 240 218;
+    --c-dangersoft: 251 228 225;
+    --c-infosoft: 223 237 248;
+    --c-hero: 226 240 226;
+    --c-scrim: 23 33 26;
 }
 
 .dark {
@@ -28,6 +36,23 @@
     --c-accent: 242 184 75;
     --c-danger: 229 100 90;
     --c-info: 90 169 230;
+    --c-onprimary: 13 26 15;
+    --c-primarysoft: 30 53 34;
+    --c-accenttext: 242 184 75;
+    --c-accentsoft: 58 48 24;
+    --c-dangersoft: 59 32 30;
+    --c-infosoft: 24 47 64;
+    --c-hero: 23 51 31;
+    --c-scrim: 5 8 6;
+}
+
+/* Item grid boleh menyusut (tabel overflow-x-auto tidak melebarkan halaman di mobile). */
+.grid > * {
+    min-width: 0;
+}
+
+[x-cloak] {
+    display: none !important;
 }
 
 @layer base {
@@ -49,7 +74,21 @@
         @apply bg-surface border border-line rounded-card;
     }
 
+    .card-pad {
+        @apply bg-surface border border-line rounded-card p-5;
+    }
+
+    .eyebrow {
+        @apply text-xs text-muted;
+    }
+
     .field {
-        @apply w-full rounded-input border border-line bg-surface2 px-3 py-2 text-sm text-ink placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none;
+        @apply h-12 w-full rounded-input border border-line bg-surface2 px-3.5 text-sm text-ink placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none;
+    }
+}
+
+@layer components {
+    textarea.field {
+        @apply h-auto py-3;
     }
 }

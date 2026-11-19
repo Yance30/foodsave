@@ -38,7 +38,54 @@ class FoodListing extends Model
 
     public function claims(): HasMany
     {
-        return $this->hasMany(Claim::class);
+        return $this->hasMany(Claim::class, 'listing_id');
+    }
+
+    public function isFree(): bool
+    {
+        return $this->scheme === 'free';
+    }
+
+    public function discountPercent(): int
+    {
+        if ($this->isFree() || ! $this->original_price || ! $this->sale_price) {
+            return 0;
+        }
+
+        return (int) round((1 - $this->sale_price / $this->original_price) * 100);
+    }
+
+    /** Label badge di atas foto: "GRATIS" / "DISKON 50%". */
+    public function schemeLabel(): string
+    {
+        if ($this->isFree()) {
+            return 'Gratis';
+        }
+
+        return $this->discountPercent() ? 'Diskon '.$this->discountPercent().'%' : 'Diskon';
+    }
+
+    /** "16.00–18.00" */
+    public function pickupWindow(): string
+    {
+        return $this->pickup_start->format('H.i').'–'.$this->pickup_end->format('H.i');
+    }
+
+    /** "Hari ini, Rabu" / "Besok, Kamis" / "21 Nov, Jumat" */
+    public function pickupDayLabel(): string
+    {
+        $day = $this->pickup_start->locale('id');
+
+        return match (true) {
+            $day->isToday() => 'Hari ini, '.$day->dayName,
+            $day->isTomorrow() => 'Besok, '.$day->dayName,
+            default => $day->translatedFormat('j M').', '.$day->dayName,
+        };
+    }
+
+    public static function rupiah(?int $value): string
+    {
+        return 'Rp'.number_format((int) $value, 0, ',', '.');
     }
 
     public function scopeActive($query)

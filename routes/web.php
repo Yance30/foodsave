@@ -12,11 +12,16 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/listing/{listing}', [ListingController::class, 'show'])->name('listings.show');
 Route::get('/dampak', ImpactController::class)->name('impact');
+Route::view('/tentang', 'about')->name('about');
 
 Route::middleware('auth')->group(function () {
     Route::get('/klaim', [ClaimController::class, 'index'])->name('claims.index');
-    Route::get('/listing/{listing}/klaim', [ClaimController::class, 'create'])->name('claims.create');
-    Route::post('/listing/{listing}/klaim', [ClaimController::class, 'store'])->name('claims.store');
+    Route::get('/klaim/{claim}', [ClaimController::class, 'show'])->name('claims.show');
+    // Klaim hanya untuk akun penerima — penyedia/admin tidak bisa mengklaim (mencegah dampak palsu).
+    Route::middleware('role:receiver')->group(function () {
+        Route::get('/listing/{listing}/klaim', [ClaimController::class, 'create'])->name('claims.create');
+        Route::post('/listing/{listing}/klaim', [ClaimController::class, 'store'])->name('claims.store');
+    });
 
     Route::get('/dashboard', function () {
         $user = auth()->user();
@@ -40,7 +45,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/listing/{listing}/edit', [ProviderController::class, 'edit'])->name('listings.edit');
         Route::put('/listing/{listing}', [ProviderController::class, 'update'])->name('listings.update');
         Route::delete('/listing/{listing}', [ProviderController::class, 'destroy'])->name('listings.destroy');
+        Route::post('/listing/{listing}/tutup', [ProviderController::class, 'close'])->name('listings.close');
+        Route::post('/listing/{listing}/tayangkan', [ProviderController::class, 'publish'])->name('listings.publish');
         Route::get('/konfirmasi', [ProviderController::class, 'confirm'])->name('confirm');
+        Route::post('/konfirmasi', [ProviderController::class, 'pickUpByCode'])->name('confirm.code');
         Route::post('/klaim/{claim}/konfirmasi', [ProviderController::class, 'pickUp'])->name('pickUp');
         Route::post('/klaim/{claim}/tolak', [ProviderController::class, 'cancelClaim'])->name('cancelClaim');
     });

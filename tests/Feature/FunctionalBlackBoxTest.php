@@ -36,6 +36,7 @@ class FunctionalBlackBoxTest extends TestCase
             'role' => 'provider',
             'password' => 'password',
             'password_confirmation' => 'password',
+            'terms' => '1',
         ]);
 
         $this->assertAuthenticated();
@@ -56,13 +57,28 @@ class FunctionalBlackBoxTest extends TestCase
         $profile = ProviderProfile::factory()->create(['user_id' => $provider->id]);
         $category = FoodCategory::factory()->create();
 
+        // Sebelum diverifikasi: listing ditolak.
+        $this->actingAs($provider)
+            ->post('/provider/listing', [
+                'title' => 'Roti Belum Verifikasi',
+                'category_id' => $category->id,
+                'qty_total' => 5,
+                'weight_per_unit_kg' => 0.3,
+                'scheme' => 'free',
+                'pickup_start' => $this->dt(now()->addHour()),
+                'pickup_end' => $this->dt(now()->addHours(3)),
+            ])
+            ->assertRedirect(route('provider.dashboard'))
+            ->assertSessionHas('error');
+        $this->assertDatabaseMissing('food_listings', ['title' => 'Roti Belum Verifikasi']);
+
         $this->actingAs($admin)
             ->post("/admin/verifikasi/{$provider->id}/setujui")
             ->assertRedirect();
 
         $this->assertDatabaseHas('users', ['id' => $provider->id, 'is_verified' => true]);
 
-        $this->actingAs($provider)
+        $this->actingAs($provider->fresh())
             ->post('/provider/listing', [
                 'title' => 'Roti Verifikasi',
                 'category_id' => $category->id,
@@ -202,7 +218,7 @@ class FunctionalBlackBoxTest extends TestCase
 
         $this->actingAs($a)
             ->post("/listing/{$listing->id}/klaim", ['qty' => 1])
-            ->assertRedirect(route('claims.index'));
+            ->assertRedirect(route('claims.show', Claim::firstOrFail()));
 
         $this->actingAs($b)
             ->from("/listing/{$listing->id}/klaim")
@@ -234,9 +250,17 @@ class FunctionalBlackBoxTest extends TestCase
             'qty' => 2, 'status' => 'booked',
         ]);
 
+        // Kode salah → ditolak, status tetap booked.
         $this->actingAs($provider)
-            ->post("/provider/klaim/{$claim->id}/konfirmasi")
-            ->assertRedirect();
+            ->from('/provider/konfirmasi')
+            ->post('/provider/konfirmasi', ['code' => 'FS-ZZZZ'])
+            ->assertSessionHasErrors('code');
+        $this->assertSame('booked', $claim->refresh()->status);
+
+        // Kode benar (seperti diketik penyedia di layar P4) → picked_up.
+        $this->actingAs($provider)
+            ->post('/provider/konfirmasi', ['code' => $claim->claim_code])
+            ->assertRedirect(route('provider.confirm'));
 
         $claim->refresh();
         $this->assertSame('picked_up', $claim->status);

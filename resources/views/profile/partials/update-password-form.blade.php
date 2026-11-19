@@ -1,7 +1,7 @@
-<section class="card p-4">
+<section id="kata-sandi" class="rounded-card border border-line bg-surface p-5 scroll-mt-24">
     <header>
-        <h2 class="text-sm font-bold">Perbarui kata sandi</h2>
-        <p class="mt-0.5 text-xs text-muted">Gunakan kata sandi yang panjang dan acak agar akun tetap aman.</p>
+        <h2 class="text-lg font-semibold">Kata sandi</h2>
+        <p class="mt-1 text-sm text-muted">Gunakan kata sandi yang panjang dan acak agar akun tetap aman.</p>
     </header>
 
     <form method="post" action="{{ route('password.update') }}" class="mt-4 space-y-4">

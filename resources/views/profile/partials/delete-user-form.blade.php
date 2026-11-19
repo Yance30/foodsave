@@ -1,7 +1,7 @@
-<section class="card border-danger/40 p-4">
+<section id="hapus-akun" class="rounded-card border border-danger/40 bg-surface p-5 scroll-mt-24">
     <header>
-        <h2 class="text-sm font-bold text-danger">Hapus akun</h2>
-        <p class="mt-0.5 text-xs text-muted">
+        <h2 class="text-lg font-semibold text-danger">Hapus akun</h2>
+        <p class="mt-1 text-sm text-muted">
             Setelah akun dihapus, semua data akan hilang secara permanen. Unduh data yang ingin kamu simpan sebelum menghapus akun.
         </p>
     </header>

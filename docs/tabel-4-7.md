@@ -27,7 +27,12 @@ Hapus baris ini bila tabel harus persis mengikuti template.
 ## Bukti pengujian (bahan sub-bab 4.3.3 Pembahasan)
 
 - **Kelas tes:** `tests/Feature/FunctionalBlackBoxTest.php` — 11 method, dipetakan 1:1 ke F-01..F-11.
-- **Hasil:** 11 passed (63 assertions); suite lengkap **36 passed (124 assertions)**, 0 gagal.
+- **Hasil:** 11 passed (71 assertions); suite lengkap **44 passed (177 assertions)**, 0 gagal
+  (diperbarui 19 Nov 2026 setelah UI disamakan dengan Figma).
+- **Catatan F-02:** kini juga menguji kasus negatif — provider yang *belum* diverifikasi ditolak saat
+  menayangkan listing (sebelumnya status verifikasi tidak ditegakkan di backend).
+- **Catatan F-08:** konfirmasi dilakukan dengan mengetik kode `FS-XXXX` (layar P4); kode salah ditolak,
+  kode benar → `picked_up`. Format kode kini 4 karakter alfanumerik (mis. `FS-7K2Q`).
 - **Lingkungan:** PHPUnit, SQLite `:memory:` (RefreshDatabase), `CACHE_STORE=array`,
   `SESSION_DRIVER=array`, `BCRYPT_ROUNDS=4`, ekstensi `gd` aktif (dibutuhkan F-11).
 - **Verifikasi F-11 via HTTP nyata (tambahan di luar unit test):**

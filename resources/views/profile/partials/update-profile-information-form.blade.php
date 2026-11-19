@@ -1,7 +1,7 @@
-<section class="card p-4">
+<section id="data-akun" class="rounded-card border border-line bg-surface p-5 scroll-mt-24">
     <header>
-        <h2 class="text-sm font-bold">Informasi profil</h2>
-        <p class="mt-0.5 text-xs text-muted">Perbarui nama dan alamat email akunmu.</p>
+        <h2 class="text-lg font-semibold">Data akun</h2>
+        <p class="mt-1 text-sm text-muted">Perbarui nama dan alamat email akunmu.</p>
     </header>
 
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
@@ -37,14 +37,16 @@
         <div class="grid grid-cols-2 gap-2 rounded-input bg-surface2 p-3 text-xs">
             <div>
                 <p class="text-muted">Peran</p>
-                <p class="font-semibold capitalize text-ink">{{ $user->role }}</p>
+                <p class="font-semibold text-ink">{{ ['receiver' => 'Penerima', 'provider' => 'Penyedia', 'admin' => 'Admin'][$user->role] ?? $user->role }}</p>
             </div>
             <div>
                 <p class="text-muted">Status</p>
-                @if ($user->is_verified)
+                @if (! $user->isProvider())
+                    <p class="inline-flex items-center gap-1 font-semibold text-primary"><x-icon name="check" class="h-3 w-3" /> Aktif</p>
+                @elseif ($user->is_verified)
                     <p class="inline-flex items-center gap-1 font-semibold text-info"><x-icon name="check" class="h-3 w-3" /> Terverifikasi</p>
                 @else
-                    <p class="font-semibold text-accent">Menunggu verifikasi</p>
+                    <p class="font-semibold text-accenttext">Menunggu verifikasi</p>
                 @endif
             </div>
         </div>

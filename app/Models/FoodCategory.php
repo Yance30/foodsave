@@ -20,6 +20,6 @@ class FoodCategory extends Model
 
     public function listings(): HasMany
     {
-        return $this->hasMany(FoodListing::class);
+        return $this->hasMany(FoodListing::class, 'category_id');
     }
 }

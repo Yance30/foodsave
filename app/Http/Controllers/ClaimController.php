@@ -9,30 +9,63 @@ use Illuminate\Support\Facades\DB;
 
 class ClaimController extends Controller
 {
+    // Tanpa karakter ambigu (0/O, 1/I/L) agar mudah dibacakan ke penyedia.
+    private const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
     public function index(Request $request)
     {
         $tab = $request->query('s', 'aktif');
+        $user = $request->user();
 
-        $claims = $request->user()->claims()
-            ->with(['listing.provider'])
+        $claims = $user->claims()
+            ->with(['listing.provider', 'impactLog'])
             ->whereIn('status', $tab === 'riwayat' ? ['picked_up', 'expired', 'cancelled'] : ['booked'])
             ->latest('claimed_at')
             ->get();
 
-        return view('claims.index', ['claims' => $claims, 'tab' => $tab]);
+        return view('claims.index', [
+            'claims' => $claims,
+            'tab' => $tab,
+            'activeCount' => $user->claims()->where('status', 'booked')->count(),
+            // Figma State-Klaim-Kedaluwarsa: tampilkan klaim yang baru kedaluwarsa (24 jam terakhir) di tab Aktif.
+            'recentlyExpired' => $tab === 'aktif'
+                ? $user->claims()->with('listing.provider')->where('status', 'expired')
+                    ->where('updated_at', '>=', now()->subDay())->latest('updated_at')->first()
+                : null,
+        ]);
+    }
+
+    public function show(Request $request, Claim $claim)
+    {
+        abort_unless($claim->receiver_id === $request->user()->id, 403);
+
+        $claim->load(['listing.provider', 'impactLog']);
+
+        return view('claims.show', ['claim' => $claim]);
     }
 
     public function create(FoodListing $listing)
     {
         $listing->load('provider');
 
-        return view('claims.create', ['listing' => $listing]);
+        if ($listing->status !== 'active' || $listing->pickup_end->isPast() || $listing->qty_available < 1) {
+            return redirect()->route('listings.show', $listing)->with('error', 'Maaf, listing ini sudah tidak tersedia.');
+        }
+
+        return view('claims.create', [
+            'listing' => $listing,
+            'maxQty' => min($listing->qty_available, Claim::MAX_QTY_PER_CLAIM),
+        ]);
     }
 
     public function store(Request $request, FoodListing $listing)
     {
         $data = $request->validate([
-            'qty' => ['required', 'integer', 'min:1', 'max:'.$listing->qty_available],
+            'qty' => ['required', 'integer', 'min:1', 'max:'.$listing->qty_available, 'max:'.Claim::MAX_QTY_PER_CLAIM],
+        ], [
+            'qty.max' => $listing->qty_available < Claim::MAX_QTY_PER_CLAIM || $request->integer('qty') > $listing->qty_available
+                ? 'Stok tidak mencukupi. Tersisa '.$listing->qty_available.' porsi.'
+                : 'Maksimal '.Claim::MAX_QTY_PER_CLAIM.' porsi per orang.',
         ]);
 
         if ($listing->status !== 'active' || $listing->pickup_end->isPast()) {
@@ -80,15 +113,17 @@ class ClaimController extends Controller
             return back()->with('error', 'Stok tidak mencukupi. Coba kurangi jumlah porsi.');
         }
 
-        return redirect()
-            ->route('claims.index')
-            ->with('success', 'Klaim berhasil! Tunjukkan kode '.$claim->claim_code.' saat pengambilan.');
+        return redirect()->route('claims.show', $claim);
     }
 
+    /** Format Figma: FS-7K2Q (4 karakter alfanumerik). */
     private function generateClaimCode(): string
     {
         do {
-            $code = 'FS-'.random_int(1000, 9999);
+            $code = 'FS-';
+            for ($i = 0; $i < 4; $i++) {
+                $code .= self::CODE_ALPHABET[random_int(0, strlen(self::CODE_ALPHABET) - 1)];
+            }
         } while (Claim::where('claim_code', $code)->exists());
 
         return $code;

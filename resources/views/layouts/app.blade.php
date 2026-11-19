@@ -14,110 +14,104 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased">
-        <div class="min-h-screen md:flex">
-            {{-- Sidebar desktop --}}
-            <aside class="hidden md:flex md:w-60 md:shrink-0 md:flex-col border-r border-line bg-surface p-4 gap-6 sticky top-0 h-screen">
-                <a href="{{ route('home') }}" class="flex items-center gap-2 px-2">
-                    <x-application-logo class="h-7 w-7" />
-                    <span class="text-lg font-bold tracking-tight">FoodSave</span>
-                </a>
+        @php($user = auth()->user())
+        <div class="flex min-h-screen flex-col">
+            {{-- Top navigation (Figma: Nav/Top · Desktop) --}}
+            <header class="sticky top-0 z-30 border-b border-line bg-bg/95 backdrop-blur">
+                <div class="mx-auto flex h-16 max-w-content items-center gap-6 px-4 md:h-[72px] md:px-8">
+                    <a href="{{ route('home') }}" class="flex items-center gap-2.5">
+                        <x-application-logo class="h-8 w-8 md:h-9 md:w-9" />
+                        <span class="text-lg font-semibold tracking-tight">FoodSave</span>
+                    </a>
 
-                <nav class="flex flex-col gap-1 text-sm font-medium">
-                    <x-side-link href="{{ route('home') }}" :active="request()->routeIs('home')" icon="home">Beranda</x-side-link>
-                    <x-side-link href="{{ route('claims.index') }}" :active="request()->routeIs('claims.*')" icon="ticket">Klaim Saya</x-side-link>
-                    <x-side-link href="{{ route('impact') }}" :active="request()->routeIs('impact')" icon="leaf">Dampak</x-side-link>
+                    <nav aria-label="Utama" class="hidden items-center gap-1 text-sm font-medium md:flex">
+                        <x-nav-link :href="route('home')" :active="request()->routeIs('home', 'listings.*', 'claims.create')" icon="home">Beranda</x-nav-link>
+                        <x-nav-link :href="route('claims.index')" :active="request()->routeIs('claims.index', 'claims.show')" icon="ticket">Klaim saya</x-nav-link>
+                        <x-nav-link :href="route('impact')" :active="request()->routeIs('impact')" icon="leaf">Dampak</x-nav-link>
+                    </nav>
 
-                    @auth
-                        @if (auth()->user()->isProvider())
-                            <p class="px-3 pt-4 pb-1 text-xs uppercase tracking-wide text-muted">Provider</p>
-                            <x-side-link href="{{ route('provider.dashboard') }}" :active="request()->routeIs('provider.dashboard')" icon="store">Dashboard</x-side-link>
-                            <x-side-link href="{{ route('provider.listings.index') }}" :active="request()->routeIs('provider.listings.*')" icon="package">Kelola Listing</x-side-link>
-                            <x-side-link href="{{ route('provider.confirm') }}" :active="request()->routeIs('provider.confirm')" icon="qr">Konfirmasi Ambil</x-side-link>
-                            <x-side-link href="{{ route('provider.profile') }}" :active="request()->routeIs('provider.profile')" icon="pin">Profil Usaha</x-side-link>
-                        @endif
-                        @if (auth()->user()->isAdmin())
-                            <p class="px-3 pt-4 pb-1 text-xs uppercase tracking-wide text-muted">Admin</p>
-                            <x-side-link href="{{ route('admin.dashboard') }}" :active="request()->routeIs('admin.*')" icon="shield">Dashboard Admin</x-side-link>
-                        @endif
-                    @endauth
-                </nav>
+                    <div class="ms-auto flex items-center gap-2 md:gap-3">
+                        <span class="hidden items-center gap-1.5 rounded-chip bg-surface2 px-3.5 py-2 text-sm font-medium lg:inline-flex">
+                            <x-icon name="pin" class="h-4 w-4 text-primary" /> Kota Malang
+                        </span>
 
-                <div class="mt-auto flex flex-col gap-1 text-sm font-medium">
-                    <x-side-link href="{{ route('profile.edit') }}" :active="request()->routeIs('profile.*')" icon="user">Profil</x-side-link>
-                    <button type="button" x-data x-on:click="window.dispatchEvent(new CustomEvent('theme-toggle'))" class="flex items-center gap-3 rounded-btn px-3 py-2 text-muted hover:bg-surface2 hover:text-ink">
-                        <x-icon name="moon" class="h-4 w-4" /> Ganti tema
-                    </button>
-                    @auth
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="flex w-full items-center gap-3 rounded-btn px-3 py-2 text-muted hover:bg-surface2 hover:text-ink">
-                                <x-icon name="logout" class="h-4 w-4" /> Keluar
-                            </button>
-                        </form>
-                    @else
-                        <a href="{{ route('login') }}" class="flex items-center gap-3 rounded-btn px-3 py-2 text-muted hover:bg-surface2 hover:text-ink">
-                            <x-icon name="logout" class="h-4 w-4" /> Masuk
-                        </a>
-                    @endauth
-                </div>
-            </aside>
+                        <button type="button" x-data x-on:click="window.dispatchEvent(new CustomEvent('theme-toggle'))"
+                            class="grid h-10 w-10 place-items-center rounded-chip text-muted hover:bg-surface2 hover:text-ink" aria-label="Ganti tema">
+                            <x-icon name="sun" class="h-5 w-5 dark:hidden" />
+                            <x-icon name="moon" class="hidden h-5 w-5 dark:block" />
+                        </button>
 
-            {{-- Kolom utama --}}
-            <div class="flex-1">
-                <header class="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur">
-                    <div class="mx-auto flex max-w-content items-center gap-3 px-4 py-3">
-                        <a href="{{ route('home') }}" class="flex items-center gap-2 md:hidden">
-                            <x-application-logo class="h-6 w-6" />
-                            <span class="font-bold tracking-tight">FoodSave</span>
-                        </a>
-                        <div class="hidden md:block">
-                            @isset($header)
-                                <h1 class="text-lg font-semibold">{{ $header }}</h1>
-                            @endisset
-                        </div>
-                        <div class="ms-auto flex items-center gap-2">
-                            <button type="button" x-data x-on:click="window.dispatchEvent(new CustomEvent('theme-toggle'))" class="rounded-btn border border-line bg-surface p-2 text-muted hover:text-ink" aria-label="Ganti tema">
-                                <x-icon name="sun" class="h-4 w-4 dark:hidden" />
-                                <x-icon name="moon" class="hidden h-4 w-4 dark:block" />
-                            </button>
-                            @auth
-                                <a href="{{ route('profile.edit') }}" class="grid h-9 w-9 place-items-center rounded-chip bg-primary/15 text-sm font-semibold text-primary">
-                                    {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                                </a>
-                            @else
-                                <a href="{{ route('login') }}" class="rounded-btn border border-line bg-surface px-3 py-1.5 text-sm font-medium">Masuk</a>
-                            @endauth
-                        </div>
+                        @auth
+                            <a href="{{ route('claims.index') }}" class="relative grid h-10 w-10 place-items-center rounded-chip text-ink hover:bg-surface2"
+                                aria-label="Klaim aktif{{ $activeClaims ? ': '.$activeClaims : '' }}">
+                                <x-icon name="bell" class="h-5 w-5" />
+                                @if ($activeClaims)
+                                    <span class="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-danger ring-2 ring-bg"></span>
+                                @endif
+                            </a>
+
+                            <div x-data="{ open: false }" class="relative hidden md:block">
+                                <button type="button" x-on:click="open = !open" x-on:click.outside="open = false"
+                                    class="flex items-center gap-2 rounded-chip border border-line bg-surface py-1 pe-3 ps-1 text-sm font-medium hover:bg-surface2"
+                                    :aria-expanded="open">
+                                    <span class="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm font-semibold text-onprimary">
+                                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                                    </span>
+                                    {{ strtok($user->name, ' ') }}
+                                    <x-icon name="chevron-down" class="h-4 w-4 text-muted" />
+                                </button>
+                                <div x-show="open" x-cloak x-transition.opacity
+                                    class="absolute right-0 mt-2 w-56 overflow-hidden rounded-card border border-line bg-surface py-1 text-sm shadow-lg">
+                                    <div class="border-b border-line px-4 py-3">
+                                        <p class="font-semibold">{{ $user->name }}</p>
+                                        <p class="truncate text-xs text-muted">{{ $user->email }}</p>
+                                    </div>
+                                    @if ($user->isProvider())
+                                        <a href="{{ route('provider.dashboard') }}" class="flex items-center gap-2 px-4 py-2.5 hover:bg-surface2"><x-icon name="store" class="h-4 w-4 text-muted" /> Panel penyedia</a>
+                                    @elseif ($user->isAdmin())
+                                        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 px-4 py-2.5 hover:bg-surface2"><x-icon name="shield" class="h-4 w-4 text-muted" /> Admin panel</a>
+                                    @endif
+                                    <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-2.5 hover:bg-surface2"><x-icon name="user" class="h-4 w-4 text-muted" /> Profil</a>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit" class="flex w-full items-center gap-2 px-4 py-2.5 text-danger hover:bg-surface2"><x-icon name="logout" class="h-4 w-4" /> Keluar</button>
+                                    </form>
+                                </div>
+                            </div>
+                        @else
+                            <x-button :href="route('login')" variant="outline" size="sm">Masuk</x-button>
+                            <x-button :href="route('register')" size="sm" class="hidden sm:inline-flex">Daftar</x-button>
+                        @endauth
                     </div>
-                </header>
+                </div>
+            </header>
 
-                <main class="mx-auto max-w-content px-4 pb-24 pt-4 md:pb-10 md:pt-6">
-                    @if (session('status') || session('success') || session('error'))
-                        <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 4000)" x-show="show" x-cloak
-                            class="mb-4 rounded-btn border px-4 py-3 text-sm {{ session('error') ? 'border-danger/40 bg-danger/10 text-danger' : 'border-primary/40 bg-primary/10 text-primary' }}">
-                            {{ session('error') ?? session('success') ?? session('status') }}
-                        </div>
-                    @endif
+            <main class="mx-auto w-full flex-1 px-4 pb-28 pt-6 md:px-8 md:pb-14 md:pt-8 {{ $narrow ? 'max-w-[640px]' : 'max-w-content' }}">
+                <x-flash />
+                {{ $slot }}
+            </main>
 
-                    {{ $slot }}
-                </main>
-            </div>
+            {{-- Footer --}}
+            <footer class="hidden border-t border-line md:block">
+                <div class="mx-auto flex max-w-content items-center justify-between px-8 py-6 text-xs text-muted">
+                    <p>© {{ now()->year }} FoodSave · Proyek Akhir SIB · FILKOM UB</p>
+                    <nav class="flex gap-8" aria-label="Footer">
+                        <a href="{{ route('about') }}#keamanan-pangan" class="hover:text-ink">Keamanan pangan</a>
+                        <a href="{{ route('about') }}#syarat-privasi" class="hover:text-ink">Syarat &amp; privasi</a>
+                        <a href="{{ route('about') }}" class="hover:text-ink">Tentang</a>
+                    </nav>
+                </div>
+            </footer>
         </div>
 
-        {{-- Bottom nav mobile --}}
-        <nav class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-surface md:hidden">
-            <x-tab-link href="{{ route('home') }}" :active="request()->routeIs('home')" icon="home">Beranda</x-tab-link>
-            <x-tab-link href="{{ route('claims.index') }}" :active="request()->routeIs('claims.*')" icon="ticket">Klaim</x-tab-link>
+        {{-- Tab bar mobile (Figma: Tab Bar, 4 item) --}}
+        <nav aria-label="Utama" class="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
+            <x-tab-link href="{{ route('home') }}" :active="request()->routeIs('home', 'listings.*', 'claims.create')" icon="home">Beranda</x-tab-link>
+            <x-tab-link href="{{ route('claims.index') }}" :active="request()->routeIs('claims.index', 'claims.show')" icon="ticket">Klaim</x-tab-link>
             <x-tab-link href="{{ route('impact') }}" :active="request()->routeIs('impact')" icon="leaf">Dampak</x-tab-link>
-            <x-tab-link href="{{ auth()->check() ? route('profile.edit') : route('login') }}" :active="request()->routeIs('profile.*')" icon="user">Profil</x-tab-link>
+            <x-tab-link href="{{ auth()->check() ? route('profile.edit') : route('login') }}" :active="request()->routeIs('profile.*', 'login')" icon="user">Profil</x-tab-link>
         </nav>
 
-        <script>
-            window.addEventListener('theme-toggle', () => {
-                const root = document.documentElement;
-                root.classList.toggle('dark');
-                localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
-            });
-        </script>
+        <x-theme-script />
     </body>
 </html>

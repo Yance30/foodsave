@@ -5,13 +5,19 @@ namespace App\View\Components;
 use Illuminate\View\Component;
 use Illuminate\View\View;
 
+/**
+ * Layout publik & receiver (Figma: top navigation + footer, tab bar di mobile).
+ */
 class AppLayout extends Component
 {
-    /**
-     * Get the view / contents that represents the component.
-     */
+    public function __construct(public bool $narrow = false) {}
+
     public function render(): View
     {
-        return view('layouts.app');
+        $user = auth()->user();
+
+        return view('layouts.app', [
+            'activeClaims' => $user ? $user->claims()->where('status', 'booked')->count() : 0,
+        ]);
     }
 }

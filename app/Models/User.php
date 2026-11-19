@@ -66,6 +66,11 @@ class User extends Authenticatable
         return $this->role === 'provider';
     }
 
+    public function isReceiver(): bool
+    {
+        return $this->role === 'receiver';
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

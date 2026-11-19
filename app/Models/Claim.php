@@ -11,6 +11,9 @@ class Claim extends Model
 {
     use HasFactory;
 
+    // Figma R3/R4: "Maks. 2 porsi per orang".
+    public const MAX_QTY_PER_CLAIM = 2;
+
     protected $fillable = [
         'listing_id', 'receiver_id', 'qty', 'claim_code', 'status',
         'distance_km', 'claimed_at', 'picked_up_at',

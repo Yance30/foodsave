@@ -8,7 +8,7 @@ use App\Models\ImpactLog;
 class ImpactCalculator
 {
     // kg CO2e per km angkutan motor; dipakai hanya bila jarak pengambilan diketahui.
-    private const TRANSPORT_KG_CO2E_PER_KM = 0.2;
+    public const TRANSPORT_KG_CO2E_PER_KM = 0.2;
 
     public function record(Claim $claim): ImpactLog
     {

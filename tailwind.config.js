@@ -28,6 +28,14 @@ export default {
                 accent: 'rgb(var(--c-accent) / <alpha-value>)',
                 danger: 'rgb(var(--c-danger) / <alpha-value>)',
                 info: 'rgb(var(--c-info) / <alpha-value>)',
+                onprimary: 'rgb(var(--c-onprimary) / <alpha-value>)',
+                primarysoft: 'rgb(var(--c-primarysoft) / <alpha-value>)',
+                accenttext: 'rgb(var(--c-accenttext) / <alpha-value>)',
+                accentsoft: 'rgb(var(--c-accentsoft) / <alpha-value>)',
+                dangersoft: 'rgb(var(--c-dangersoft) / <alpha-value>)',
+                infosoft: 'rgb(var(--c-infosoft) / <alpha-value>)',
+                hero: 'rgb(var(--c-hero) / <alpha-value>)',
+                scrim: 'rgb(var(--c-scrim) / <alpha-value>)',
             },
             borderRadius: {
                 card: '12px',
@@ -36,7 +44,7 @@ export default {
                 chip: '999px',
             },
             maxWidth: {
-                content: '1120px',
+                content: '1216px',
             },
         },
     },
