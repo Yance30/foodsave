@@ -100,6 +100,20 @@ class AdminController extends Controller
         return back()->with('success', 'Faktor emisi ditambahkan.');
     }
 
+    public function updateFactor(Request $request, EmissionFactor $factor)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'kg_co2e_per_kg' => ['required', 'numeric', 'min:0'],
+            'source' => ['nullable', 'string', 'max:255'],
+            'year' => ['nullable', 'integer', 'min:1900', 'max:2100'],
+        ]);
+
+        $factor->update($data);
+
+        return back()->with('success', 'Faktor emisi diperbarui.');
+    }
+
     public function destroyFactor(EmissionFactor $factor)
     {
         $factor->delete();

@@ -2,7 +2,7 @@
     <x-slot name="title">Buat Listing</x-slot>
     <x-slot name="header">Buat Listing Baru</x-slot>
 
-    <form method="POST" action="{{ route('provider.listings.store') }}" class="mx-auto max-w-lg space-y-4">
+    <form method="POST" action="{{ route('provider.listings.store') }}" enctype="multipart/form-data" class="mx-auto max-w-lg space-y-4">
         @csrf
         @include('provider._listing-form')
 

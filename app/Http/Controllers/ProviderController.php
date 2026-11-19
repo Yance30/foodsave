@@ -7,6 +7,7 @@ use App\Models\FoodCategory;
 use App\Models\FoodListing;
 use App\Models\ProviderProfile;
 use App\Services\ImpactCalculator;
+use App\Services\PhotoUpload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -67,7 +68,7 @@ class ProviderController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, PhotoUpload $photos)
     {
         $profile = $this->profile($request);
 
@@ -92,7 +93,9 @@ class ProviderController extends Controller
             'pickup_start' => $data['pickup_start'],
             'pickup_end' => $data['pickup_end'],
             'status' => 'active',
-            'image_path' => null,
+            'image_path' => $request->hasFile('image')
+                ? $photos->store($request->file('image'))
+                : null,
         ]);
 
         return redirect()->route('provider.listings.index')->with('success', 'Listing berhasil dibuat.');
@@ -109,13 +112,15 @@ class ProviderController extends Controller
         ]);
     }
 
-    public function update(Request $request, FoodListing $listing)
+    public function update(Request $request, FoodListing $listing, PhotoUpload $photos)
     {
         $this->authorizeListing($request, $listing);
 
         $data = $this->validateListing($request);
 
-        DB::transaction(function () use ($listing, $data) {
+        $oldImage = $listing->image_path;
+
+        DB::transaction(function () use ($listing, $data, $request, $photos) {
             $claimed = $listing->qty_total - $listing->qty_available;
             $newAvailable = max(0, $data['qty_total'] - $claimed);
 
@@ -133,12 +138,20 @@ class ProviderController extends Controller
                 'pickup_end' => $data['pickup_end'],
             ]);
 
+            if ($request->hasFile('image')) {
+                $listing->image_path = $photos->store($request->file('image'));
+            }
+
             if ($listing->status === 'sold_out' && $newAvailable > 0 && $listing->pickup_end->isFuture()) {
                 $listing->status = 'active';
             }
 
             $listing->save();
         });
+
+        if ($request->hasFile('image') && $oldImage !== $listing->image_path) {
+            $photos->delete($oldImage);
+        }
 
         return redirect()->route('provider.listings.index')->with('success', 'Listing diperbarui.');
     }
@@ -165,6 +178,7 @@ class ProviderController extends Controller
             'sale_price' => ['nullable', 'integer', 'min:0'],
             'pickup_start' => ['required', 'date'],
             'pickup_end' => ['required', 'date', 'after:pickup_start', 'after:now'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
     }
 

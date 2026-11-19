@@ -54,6 +54,39 @@
                                 <p class="text-lg font-bold text-primary">{{ number_format($factor->kg_co2e_per_kg, 2, ',', '.') }}</p>
                                 <p class="text-[11px] text-muted">kg CO₂e / kg</p>
                             </div>
+
+                            <x-bottom-sheet title="Edit faktor emisi">
+                                <x-slot name="trigger">
+                                    <x-icon name="edit" class="h-3.5 w-3.5" /> Edit
+                                </x-slot>
+
+                                <form method="POST" action="{{ route('admin.factors.update', $factor) }}" class="space-y-3 text-sm">
+                                    @csrf
+                                    @method('PUT')
+                                    <div>
+                                        <label class="mb-1 block text-xs font-semibold text-muted" for="edit-name-{{ $factor->id }}">Nama</label>
+                                        <input id="edit-name-{{ $factor->id }}" name="name" type="text" class="field" value="{{ $factor->name }}" required>
+                                        @error('name')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div>
+                                        <label class="mb-1 block text-xs font-semibold text-muted" for="edit-kg-{{ $factor->id }}">kg CO₂e per kg</label>
+                                        <input id="edit-kg-{{ $factor->id }}" name="kg_co2e_per_kg" type="number" step="0.01" min="0" class="field" value="{{ $factor->kg_co2e_per_kg }}" required>
+                                        @error('kg_co2e_per_kg')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="mb-1 block text-xs font-semibold text-muted" for="edit-source-{{ $factor->id }}">Sumber</label>
+                                            <input id="edit-source-{{ $factor->id }}" name="source" type="text" class="field" value="{{ $factor->source }}">
+                                        </div>
+                                        <div>
+                                            <label class="mb-1 block text-xs font-semibold text-muted" for="edit-year-{{ $factor->id }}">Tahun</label>
+                                            <input id="edit-year-{{ $factor->id }}" name="year" type="number" min="1900" max="2100" class="field" value="{{ $factor->year }}">
+                                        </div>
+                                    </div>
+                                    <x-button type="submit" class="w-full">Simpan perubahan</x-button>
+                                </form>
+                            </x-bottom-sheet>
+
                             <form method="POST" action="{{ route('admin.factors.destroy', $factor) }}"
                                 onsubmit="return confirm('Hapus faktor {{ $factor->name }}? Kategori terkait akan kehilangan faktor.');">
                                 @csrf

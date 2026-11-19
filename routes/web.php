@@ -56,6 +56,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/pengguna/{user}', [AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/pengguna/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
         Route::post('/faktor-emisi', [AdminController::class, 'storeFactor'])->name('factors.store');
+        Route::put('/faktor-emisi/{factor}', [AdminController::class, 'updateFactor'])->name('factors.update');
         Route::delete('/faktor-emisi/{factor}', [AdminController::class, 'destroyFactor'])->name('factors.destroy');
     });
 

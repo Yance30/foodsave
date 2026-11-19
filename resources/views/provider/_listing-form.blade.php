@@ -87,11 +87,17 @@
     </div>
 
     <div>
-        <label class="mb-1 block text-xs font-semibold text-muted" for="image">Foto makanan</label>
-        <label for="image" class="flex cursor-not-allowed flex-col items-center gap-2 rounded-input border border-dashed border-line bg-surface px-4 py-6 text-center text-xs text-muted">
+        <label class="mb-1 block text-xs font-semibold text-muted" for="image">Foto makanan (opsional)</label>
+        @if ($listing?->image_path)
+            <img src="{{ asset($listing->image_path) }}" alt="Foto {{ $listing->title }}"
+                class="mb-2 h-32 w-32 rounded-input border border-line object-cover">
+            <p class="mb-2 text-xs text-muted">Unggah foto baru untuk mengganti.</p>
+        @endif
+        <label for="image" class="flex cursor-pointer flex-col items-center gap-2 rounded-input border border-dashed border-line bg-surface px-4 py-6 text-center text-xs text-muted hover:border-primary">
             <x-icon name="image" class="h-6 w-6" />
-            <span>Unggah foto (WebP, maks. 800 px) segera hadir</span>
-            <input id="image" name="image" type="file" accept="image/*" class="sr-only" disabled>
+            <span>Pilih foto (JPG/PNG/WebP, maks. 4 MB) — dikonversi ke WebP 800 px</span>
+            <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only">
         </label>
+        @error('image')<p class="mt-1 text-xs text-danger">{{ $message }}</p>@enderror
     </div>
 </div>

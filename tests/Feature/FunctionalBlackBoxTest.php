@@ -11,11 +11,12 @@ use App\Models\ProviderProfile;
 use App\Models\User;
 use App\Services\ListingExpiry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /**
  * Pengujian fungsional (black-box) — Tabel 4.7 laporan.
- * Setiap method dipetakan 1:1 ke skenario F-01..F-10.
+ * Setiap method dipetakan 1:1 ke skenario F-01..F-11.
  */
 class FunctionalBlackBoxTest extends TestCase
 {
@@ -293,5 +294,41 @@ class FunctionalBlackBoxTest extends TestCase
         $this->assertEqualsWithDelta(20.0, $total['co2e'], 0.001);
         $this->assertEqualsWithDelta(30000.0, $total['value'], 0.001);
         $this->assertSame(2, $total['claims']);
+    }
+
+    /** F-11 — Provider unggah foto listing → dikonversi ke WebP, sisi terpanjang ≤ 800 px. */
+    public function test_f11_provider_uploads_listing_photo_converted_to_webp_800px(): void
+    {
+        $provider = User::factory()->provider()->verified()->create();
+        ProviderProfile::factory()->create(['user_id' => $provider->id]);
+        $category = FoodCategory::factory()->create();
+
+        $file = UploadedFile::fake()->image('photo.jpg', 1200, 900);
+
+        $this->actingAs($provider)->post('/provider/listing', [
+            'title' => 'Roti Berfoto',
+            'category_id' => $category->id,
+            'qty_total' => 4,
+            'weight_per_unit_kg' => 0.3,
+            'scheme' => 'free',
+            'pickup_start' => $this->dt(now()->addHour()),
+            'pickup_end' => $this->dt(now()->addHours(3)),
+            'image' => $file,
+        ])->assertRedirect(route('provider.listings.index'));
+
+        $listing = FoodListing::where('title', 'Roti Berfoto')->firstOrFail();
+        $this->assertNotNull($listing->image_path);
+        $this->assertStringEndsWith('.webp', $listing->image_path);
+
+        $absolute = public_path($listing->image_path);
+        $this->assertFileExists($absolute);
+
+        [$width, $height, $type] = getimagesize($absolute);
+        $this->assertSame(IMAGETYPE_WEBP, $type);
+        $this->assertLessThanOrEqual(800, $width);
+        $this->assertLessThanOrEqual(800, $height);
+        $this->assertSame(800, $width); // 1200x900 diskala proporsional ke 800x600
+
+        @unlink($absolute); // bersihkan artefak uji dari public/uploads
     }
 }
