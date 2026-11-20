@@ -57,3 +57,36 @@ Hapus baris ini bila tabel harus persis mengikuti template.
 | F-09 | `test_f09_expired_claim_releases_stock` |
 | F-10 | `test_f10_dashboard_shows_correct_aggregation` |
 | F-11 | `test_f11_provider_uploads_listing_photo_converted_to_webp_800px` |
+
+---
+
+## Skenario tambahan (fitur lanjutan, 19–20 Nov 2026)
+
+> Opsional untuk laporan: semua baris di bawah sudah diuji otomatis dan **lulus**.
+> Suite lengkap: **60 tes · 268 asersi**, 0 gagal.
+
+| ID | Skenario | Hasil yang Diharapkan | Status |
+|----|----------|-----------------------|--------|
+| F-12 | Penyedia/admin mencoba mengklaim makanan | Ditolak (403); hanya akun penerima yang bisa klaim | ✓ Lulus |
+| F-13 | Penerima mengklaim lebih dari 2 porsi | Ditolak dengan pesan "Maksimal 2 porsi per orang" | ✓ Lulus |
+| F-14 | Penerima membatalkan klaim sendiri | Status `cancelled`, stok kembali, penyedia diberi notifikasi | ✓ Lulus |
+| F-15 | Admin menolak penyedia tanpa alasan / dengan alasan | Tanpa alasan ditolak validasi; dengan alasan → status Ditolak, penyedia diberi tahu dan bisa mengajukan ulang | ✓ Lulus |
+| F-16 | Akses dokumen verifikasi oleh pihak lain | Hanya pemilik usaha & admin yang bisa membuka (lainnya 403) | ✓ Lulus |
+| F-17 | Penyedia mengunggah 4 foto / 3 foto | 4 foto ditolak; 3 foto disimpan (foto pertama = sampul, galeri 1/3) | ✓ Lulus |
+| F-18 | Penerima mengatur lokasi lalu memfilter ≤ 2 km | Listing terurut dari terdekat; listing > 2 km tidak tampil | ✓ Lulus |
+| F-19 | Klaim baru → konfirmasi pengambilan | Penyedia & penerima menerima notifikasi; notifikasi ditandai dibaca saat dibuka | ✓ Lulus |
+| F-20 | Admin menonaktifkan pengguna | Akun tidak bisa masuk; riwayat dampak tetap; dapat diaktifkan kembali | ✓ Lulus |
+| F-21 | Percobaan kode klaim berulang | Setelah 10 percobaan/menit → 429 (dibatasi) | ✓ Lulus |
+
+| ID | Method tes |
+|----|-----------|
+| F-12 | `FigmaFlowTest::test_providers_and_admins_cannot_claim` |
+| F-13 | `FigmaFlowTest::test_claim_is_limited_to_two_portions_per_person` |
+| F-14 | `MaturityFeaturesTest::test_receiver_can_cancel_own_booked_claim_and_stock_returns` |
+| F-15 | `MaturityFeaturesTest::test_rejection_requires_note_and_provider_can_resubmit` |
+| F-16 | `MaturityFeaturesTest::test_verification_documents_are_private_to_owner_and_admin` |
+| F-17 | `MaturityFeaturesTest::test_listing_accepts_up_to_three_photos_with_first_as_cover` |
+| F-18 | `MaturityFeaturesTest::test_location_sorts_by_nearest_filters_radius_and_records_transport` |
+| F-19 | `MaturityFeaturesTest::test_notifications_flow_from_claim_to_pickup` |
+| F-20 | `AdminAndPolishTest::test_deactivating_user_keeps_impact_history_and_can_be_restored` |
+| F-21 | `AdminAndPolishTest::test_claim_code_attempts_are_rate_limited` |

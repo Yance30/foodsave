@@ -26,7 +26,7 @@
             @endif
         </p>
         <p class="flex items-center gap-3 text-xs text-muted">
-            <span class="inline-flex items-center gap-1"><x-icon name="pin" class="h-3.5 w-3.5" /> {{ $listing->provider->district }}</span>
+            <span class="inline-flex items-center gap-1"><x-icon name="pin" class="h-3.5 w-3.5" /> {{ $listing->distance !== null ? \App\Support\Geo::format($listing->distance) : $listing->provider->district }}</span>
             <span class="inline-flex items-center gap-1"><x-icon name="clock" class="h-3.5 w-3.5" /> Ambil {{ $listing->pickupWindow() }}</span>
         </p>
         <div class="mt-auto flex items-center justify-between gap-2 pt-1.5">

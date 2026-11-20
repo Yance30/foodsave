@@ -25,6 +25,8 @@
                                 <td class="px-4 py-3">
                                     @if ($p->is_verified)
                                         <x-badge type="verified" icon="badge-check">Terverifikasi</x-badge>
+                                    @elseif ($p->isRejected())
+                                        <x-badge type="danger" icon="x-circle">Ditolak</x-badge>
                                     @else
                                         <x-badge type="warning" icon="clock">Menunggu</x-badge>
                                     @endif
@@ -64,6 +66,7 @@
                     <div><dt class="text-xs text-muted">Alamat</dt><dd class="font-medium">{{ $pp ? $pp->address.', '.$pp->district : '—' }}</dd></div>
                     <div><dt class="text-xs text-muted">Email</dt><dd class="font-medium">{{ $selected->email }}</dd></div>
                     <div><dt class="text-xs text-muted">Telepon</dt><dd class="font-medium">{{ $selected->phone ?: '—' }}</dd></div>
+                    <div><dt class="text-xs text-muted">Jam operasional</dt><dd class="font-medium">{{ $pp?->opening_hours ?: '—' }}</dd></div>
                     @if ($pp?->lat && $pp?->lng)
                         <div>
                             <dt class="text-xs text-muted">Titik lokasi</dt>
@@ -72,29 +75,63 @@
                     @endif
                 </dl>
 
-                @unless ($selected->is_verified)
+                {{-- Dokumen verifikasi (Figma A2) --}}
+                <div class="mt-5 border-t border-line pt-4">
+                    <p class="mb-2 text-xs text-muted">Dokumen</p>
+                    @php $docs = $pp?->documents->keyBy('type') ?? collect(); @endphp
+                    <ul class="space-y-2 text-sm">
+                        @foreach (\App\Models\ProviderDocument::TYPES as $type => $label)
+                            <li class="flex items-center justify-between gap-3 rounded-btn bg-surface2 px-3 py-2">
+                                <span class="flex min-w-0 items-center gap-2"><x-icon name="file" class="h-4 w-4 shrink-0 text-muted" /> <span class="truncate">{{ $label }}</span></span>
+                                @if ($doc = $docs->get($type))
+                                    <a href="{{ route('documents.show', $doc) }}" target="_blank" rel="noopener" class="shrink-0 font-semibold text-primary hover:underline">Lihat</a>
+                                @else
+                                    <span class="shrink-0 text-xs text-muted">Belum ada</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                @if ($selected->isRejected())
+                    <div class="mt-4 rounded-card bg-dangersoft p-3.5 text-sm text-danger">
+                        <p class="font-semibold">Ditolak {{ $selected->rejected_at->locale('id')->translatedFormat('j M Y, H.i') }}</p>
+                        <p class="mt-1">{{ $selected->rejection_note }}</p>
+                        <p class="mt-1 text-xs opacity-80">Menunggu penyedia memperbaiki profil dan mengajukan ulang.</p>
+                    </div>
+                @endif
+
+                @if (! $selected->is_verified && ! $selected->isRejected())
                     <fieldset class="mt-5 space-y-2.5 border-t border-line pt-4 text-sm" x-data="{ c: [false, false, false] }">
                         <legend class="mb-2 text-xs text-muted">Daftar periksa</legend>
-                        @foreach (['Profil usaha lengkap', 'Alamat sesuai titik peta', 'Jenis usaha relevan dengan makanan'] as $i => $check)
+                        @foreach (['Profil usaha & dokumen lengkap', 'Alamat sesuai titik peta', 'Dokumen izin terbaca & valid'] as $i => $check)
                             <label class="flex cursor-pointer items-center gap-2.5">
                                 <input type="checkbox" x-model="c[{{ $i }}]" class="h-[18px] w-[18px] rounded border-line bg-surface2 text-primary focus:ring-primary/40">
                                 {{ $check }}
                             </label>
                         @endforeach
 
-                        <div class="flex gap-3 pt-3">
-                            <form method="POST" action="{{ route('admin.verifications.reject', $selected) }}" class="flex-1"
-                                x-on:submit="if (! confirm('Tolak dan hapus akun {{ addslashes($pp?->business_name ?? $selected->name) }}?')) $event.preventDefault()">
-                                @csrf @method('DELETE')
-                                <x-button variant="danger-soft" class="w-full">Tolak</x-button>
-                            </form>
-                            <form method="POST" action="{{ route('admin.verifications.approve', $selected) }}" class="flex-1">
-                                @csrf
-                                <x-button class="w-full" x-bind:disabled="! c.every(Boolean)" title="Centang semua daftar periksa dulu"><x-icon name="check" class="h-4 w-4" /> Setujui</x-button>
-                            </form>
-                        </div>
+                        <form method="POST" action="{{ route('admin.verifications.approve', $selected) }}" class="pt-3">
+                            @csrf
+                            <x-button class="w-full" x-bind:disabled="! c.every(Boolean)" title="Centang semua daftar periksa dulu"><x-icon name="check" class="h-4 w-4" /> Setujui</x-button>
+                        </form>
+
+                        {{-- Tolak + catatan: penyedia bisa memperbaiki lalu mengajukan ulang. --}}
+                        <form method="POST" action="{{ route('admin.verifications.reject', $selected) }}" class="space-y-2 pt-2" x-data="{ open: {{ $errors->has('rejection_note') ? 'true' : 'false' }} }">
+                            @csrf @method('DELETE')
+                            <button type="button" x-show="! open" x-on:click="open = true; $nextTick(() => $refs.note.focus())" class="w-full rounded-btn py-2 text-sm font-semibold text-danger hover:bg-dangersoft">Tolak dengan alasan…</button>
+                            <div x-show="open" x-cloak class="space-y-2">
+                                <x-input-label for="rejection_note" value="Alasan penolakan (dikirim ke penyedia)" />
+                                <textarea id="rejection_note" name="rejection_note" x-ref="note" rows="3" minlength="10" maxlength="500" required class="field" placeholder="mis. Foto NIB tidak terbaca, mohon unggah ulang dengan pencahayaan cukup.">{{ old('rejection_note') }}</textarea>
+                                <x-input-error :messages="$errors->get('rejection_note')" />
+                                <div class="flex gap-2">
+                                    <x-button type="button" variant="secondary" size="sm" class="flex-1" x-on:click="open = false">Batal</x-button>
+                                    <x-button variant="danger-soft" size="sm" class="flex-1">Kirim penolakan</x-button>
+                                </div>
+                            </div>
+                        </form>
                     </fieldset>
-                @endunless
+                @endif
             @endif
         </aside>
     </div>

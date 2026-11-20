@@ -21,7 +21,36 @@ class GuestLayout extends Component
                 'co2e' => (float) ImpactLog::sum('co2e_avoided_kg'),
                 'providers' => User::where('role', 'provider')->where('is_verified', true)->count(),
             ],
-            'photos' => FoodListing::whereNotNull('image_path')->latest()->limit(4)->pluck('image_path', 'title'),
+            'photos' => $this->photos(),
         ]);
+    }
+
+    /**
+     * Maks. 4 foto: dari listing yang masih aktif (bukan data uji/kedaluwarsa),
+     * dilengkapi foto demo bila kurang.
+     *
+     * @return array<string, string> alt → path relatif public
+     */
+    private function photos(): array
+    {
+        $photos = FoodListing::active()
+            ->whereNotNull('image_path')
+            ->latest()
+            ->limit(4)
+            ->pluck('image_path', 'title')
+            ->filter(fn (string $path) => is_file(public_path($path)))
+            ->all();
+
+        foreach (glob(public_path('uploads/listings/demo-*.webp')) ?: [] as $file) {
+            if (count($photos) >= 4) {
+                break;
+            }
+            $path = 'uploads/listings/'.basename($file);
+            if (! in_array($path, $photos, true)) {
+                $photos['Foto makanan '.(count($photos) + 1)] = $path;
+            }
+        }
+
+        return $photos;
     }
 }

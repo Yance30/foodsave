@@ -26,6 +26,11 @@ class User extends Authenticatable
         'role',
         'phone',
         'is_verified',
+        'lat',
+        'lng',
+        'location_label',
+        'rejection_note',
+        'rejected_at',
     ];
 
     /**
@@ -49,6 +54,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_verified' => 'boolean',
+            'lat' => 'float',
+            'lng' => 'float',
+            'rejected_at' => 'datetime',
         ];
     }
 
@@ -65,6 +73,17 @@ class User extends Authenticatable
     public function isProvider(): bool
     {
         return $this->role === 'provider';
+    }
+
+    /** Penyedia ditolak admin dan belum mengajukan ulang. */
+    public function isRejected(): bool
+    {
+        return $this->isProvider() && ! $this->is_verified && $this->rejected_at !== null;
+    }
+
+    public function hasLocation(): bool
+    {
+        return $this->lat !== null && $this->lng !== null;
     }
 
     public function isReceiver(): bool

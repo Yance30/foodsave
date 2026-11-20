@@ -42,6 +42,8 @@
         'start' => $initStart,
         'end' => $initEnd,
         'photo' => $listing?->image_path ? asset($listing->image_path) : null,
+        'gallery' => $listing ? array_map(fn ($p) => asset($p), $listing->galleryPaths()) : [],
+        'tooMany' => false,
         'cats' => $categoryNames,
     ];
 @endphp
@@ -60,15 +62,24 @@
 
         {{-- Foto --}}
         <div class="space-y-2">
-            <x-input-label for="image" value="Foto makanan" />
-            <label for="image" class="relative flex h-40 cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-card border-2 border-dashed text-center hover:border-primary/60 {{ $errors->has('image') ? 'border-danger' : 'border-line' }}">
+            <x-input-label for="photos" value="Foto makanan (maks. 3)" />
+            <label for="photos" class="relative flex h-40 cursor-pointer flex-col items-center justify-center gap-1 overflow-hidden rounded-card border-2 border-dashed text-center hover:border-primary/60 {{ $errors->has('photos') || $errors->has('photos.*') || $errors->has('image') ? 'border-danger' : 'border-line' }}">
                 <template x-if="photo"><img :src="photo" alt="" class="absolute inset-0 h-full w-full object-cover opacity-40"></template>
                 <x-icon name="camera" class="relative h-6 w-6 text-muted" />
-                <span class="relative text-sm font-semibold" x-text="photo ? 'Ganti foto' : 'Unggah foto makanan'"></span>
-                <span class="relative text-xs text-muted">JPG/PNG/WebP maks. 4 MB · otomatis dikompres ke WebP 800 px</span>
+                <span class="relative text-sm font-semibold" x-text="gallery.length ? 'Ganti foto (' + gallery.length + '/3)' : 'Unggah 1–3 foto makanan'"></span>
+                <span class="relative text-xs text-muted">Foto pertama jadi sampul · JPG/PNG/WebP maks. 4 MB · dikompres ke WebP 800 px</span>
             </label>
-            <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" x-on:change="pickPhoto($event)">
-            <x-input-error :messages="$errors->get('image')" />
+            <input id="photos" name="photos[]" type="file" multiple accept="image/jpeg,image/png,image/webp" class="sr-only" x-on:change="pickPhotos($event)">
+            <div x-show="gallery.length > 1" x-cloak class="flex gap-2">
+                <template x-for="(src, i) in gallery" :key="i">
+                    <div class="relative h-14 w-20 overflow-hidden rounded-lg border border-line">
+                        <img :src="src" alt="" class="h-full w-full object-cover">
+                        <span x-show="i === 0" class="absolute left-1 top-1 rounded bg-primary px-1 text-[10px] font-semibold text-onprimary">Sampul</span>
+                    </div>
+                </template>
+            </div>
+            <p x-show="tooMany" x-cloak class="text-xs text-accenttext">Hanya 3 foto pertama yang dipakai.</p>
+            <x-input-error :messages="array_merge($errors->get('photos'), $errors->get('photos.*'), $errors->get('image'))" />
         </div>
 
         <div class="space-y-2">
@@ -229,9 +240,11 @@
                 const op = Number(this.op), sp = Number(this.sp);
                 return op > 0 && sp > 0 && sp < op ? Math.round((1 - sp / op) * 100) : 0;
             },
-            pickPhoto(e) {
-                const f = e.target.files[0];
-                if (f) this.photo = URL.createObjectURL(f);
+            pickPhotos(e) {
+                const files = Array.from(e.target.files || []);
+                this.tooMany = files.length > 3;
+                this.gallery = files.slice(0, 3).map((f) => URL.createObjectURL(f));
+                this.photo = this.gallery[0] || null;
             },
         };
     }

@@ -32,6 +32,7 @@ class ListingExpiry
         foreach ($expiredClaims as $claim) {
             $claim->status = 'expired';
             $claim->save();
+            Notifier::claimExpired($claim);
         }
 
         // Lepas stok yang direservasi klaim kedaluwarsa kembali ke listing.

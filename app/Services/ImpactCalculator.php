@@ -8,7 +8,11 @@ use App\Models\ImpactLog;
 class ImpactCalculator
 {
     // kg CO2e per km angkutan motor; dipakai hanya bila jarak pengambilan diketahui.
-    public const TRANSPORT_KG_CO2E_PER_KM = 0.2;
+    /** kg CO₂e per km sepeda motor (config/foodsave.php, Figma A4: 0,10). */
+    public static function transportFactor(): float
+    {
+        return (float) config('foodsave.transport_kg_co2e_per_km', 0.10);
+    }
 
     public function record(Claim $claim): ImpactLog
     {
@@ -21,7 +25,7 @@ class ImpactCalculator
 
         // distance_km null sampai lokasi penerima ditangkap (lihat ClaimController).
         $distance = $claim->distance_km;
-        $transport = $distance !== null ? $distance * self::TRANSPORT_KG_CO2E_PER_KM : 0.0;
+        $transport = $distance !== null ? $distance * self::transportFactor() : 0.0;
 
         $unitValue = (float) ($listing->original_price ?: $listing->sale_price);
         $economic = $unitValue * $claim->qty;

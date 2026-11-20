@@ -13,14 +13,14 @@
         x-on:click="const a = $event.target.closest('a'); if (a && a.origin === location.origin && a.pathname === '/' && ! $event.ctrlKey && ! $event.metaKey) loading = true"
         x-on:pageshow.window="loading = false">
         {{-- Hero (Figma R1: sapaan + Dampak komunitas) --}}
-        <section class="grid gap-5 rounded-[16px] bg-hero p-5 md:grid-cols-[1fr_auto] md:items-center md:p-6 lg:p-7">
+        <section class="grid gap-5 rounded-[16px] bg-hero p-5 md:p-6 lg:grid-cols-[1fr_auto] lg:items-center lg:p-7">
             <div>
                 <h1 class="text-[28px] font-bold leading-[34px] md:text-[32px] md:leading-10">
                     {{ $user ? 'Hai, '.strtok($user->name, ' ').'! ' : '' }}Mau selamatkan apa hari ini?
                 </h1>
-                <p class="mt-2 text-muted">{{ $activeCount }} listing surplus aktif di Kota Malang · ambil langsung, bayar di tempat</p>
+                <p class="mt-2 text-muted">{{ $activeCount }} listing surplus aktif {{ $here ? 'di sekitar '.\Illuminate\Support\Str::before($here['label'], ',') : 'di Kota Malang' }} · ambil langsung, bayar di tempat</p>
             </div>
-            <div class="rounded-card bg-bg/70 p-4 md:min-w-[400px]">
+            <div class="rounded-card bg-bg/70 p-4 lg:min-w-[400px]">
                 <div class="flex items-center justify-between gap-3">
                     <p class="inline-flex items-center gap-2 text-sm font-medium"><x-icon name="leaf" class="h-4 w-4 text-primary" /> Dampak komunitas Malang</p>
                     <span class="text-xs text-muted">Bulan ini</span>
@@ -62,18 +62,24 @@
                         <span class="sr-only">Urutkan</span>
                         <select name="sort" x-on:change="$el.form.submit()"
                             class="h-12 appearance-none rounded-card border border-line bg-surface pe-10 ps-4 text-sm font-semibold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30">
-                            <option value="deadline" @selected(request('sort', 'deadline') !== 'price')>Urutkan: Batas waktu</option>
-                            <option value="price" @selected(request('sort') === 'price')>Urutkan: Termurah</option>
+                            @if ($here)
+                                <option value="nearest" @selected($sort === 'nearest')>Urutkan: Terdekat</option>
+                            @endif
+                            <option value="deadline" @selected($sort === 'deadline')>Urutkan: Batas waktu</option>
+                            <option value="price" @selected($sort === 'price')>Urutkan: Termurah</option>
                         </select>
                     </label>
                 </form>
             </div>
 
             <div class="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0" role="radiogroup" aria-label="Filter cepat">
-                @php $base = request()->except(['scheme', 'category', 'page']); @endphp
+                @php $base = request()->except(['scheme', 'category', 'page', 'jarak']); @endphp
                 <x-chip :href="route('home', $base)" :active="! request('scheme') && ! array_filter($selectedCats)">Semua</x-chip>
                 <x-chip :href="route('home', $base + ['scheme' => 'free'])" :active="request('scheme') === 'free' && ! array_filter($selectedCats)">Gratis</x-chip>
                 <x-chip :href="route('home', $base + ['scheme' => 'discount'])" :active="request('scheme') === 'discount' && ! array_filter($selectedCats)">Diskon</x-chip>
+                @if ($here)
+                    <x-chip :href="route('home', $radius === 2 ? request()->except(['jarak', 'page']) : array_merge(request()->except('page'), ['jarak' => 2]))" :active="$radius === 2">≤ 2 km</x-chip>
+                @endif
                 @foreach ($categories as $category)
                     <x-chip :href="route('home', $base + ['category' => $category->name])" :active="$selectedCats === [$category->name] && ! request('scheme')">{{ $category->name }}</x-chip>
                 @endforeach
@@ -121,12 +127,29 @@
                         </div>
                     </fieldset>
 
+                    {{-- Jarak maksimal (Figma R2) — butuh lokasi --}}
+                    <fieldset class="mt-6" x-data="{ r: {{ $radius ?? 0 }}, opts: @js(config('foodsave.radius_options')) }">
+                        <legend class="mb-3 flex w-full items-center justify-between text-sm text-muted">
+                            <span>Jarak maksimal</span>
+                            <span class="font-semibold text-primary" x-text="r ? r + ' km' : 'Semua'"></span>
+                        </legend>
+                        @if ($here)
+                            <input type="hidden" name="jarak" :value="r || ''">
+                            <input type="range" min="0" :max="opts.length" step="1" :value="r ? opts.indexOf(r) + 1 : 0"
+                                x-on:input="r = $event.target.value == 0 ? 0 : opts[$event.target.value - 1]"
+                                class="w-full accent-[rgb(var(--c-primary))]" aria-label="Jarak maksimal">
+                            <div class="mt-1 flex justify-between text-xs text-muted"><span>Semua</span><span>1 km</span><span>10 km</span></div>
+                        @else
+                            <p class="rounded-card bg-surface2 p-3 text-sm text-muted">Atur lokasimu dulu (ikon <x-icon name="pin" class="inline h-3.5 w-3.5 text-primary" /> di atas) untuk memfilter berdasarkan jarak.</p>
+                        @endif
+                    </fieldset>
+
                     <fieldset class="mt-6">
                         <legend class="mb-3 text-sm text-muted">Urutkan</legend>
-                        <div class="grid gap-3 sm:grid-cols-2">
-                            @foreach (['deadline' => ['Batas waktu', 'Segera berakhir dulu'], 'price' => ['Termurah', 'Gratis dulu']] as $value => [$label, $hint])
+                        <div class="grid gap-3 sm:grid-cols-3">
+                            @foreach (array_filter(['nearest' => $here ? ['Terdekat', 'Jarak dari lokasimu'] : null, 'deadline' => ['Batas waktu', 'Segera berakhir dulu'], 'price' => ['Termurah', 'Gratis dulu']]) as $value => [$label, $hint])
                                 <label class="flex cursor-pointer items-start gap-3">
-                                    <input type="radio" name="sort" value="{{ $value }}" @checked(request('sort', 'deadline') === $value || ($value === 'deadline' && request('sort') !== 'price'))
+                                    <input type="radio" name="sort" value="{{ $value }}" @checked($sort === $value)
                                         class="mt-0.5 h-5 w-5 border-2 border-muted bg-transparent text-primary focus:ring-primary/40">
                                     <span><span class="block text-sm font-semibold">{{ $label }}</span><span class="block text-xs text-muted">{{ $hint }}</span></span>
                                 </label>
@@ -144,9 +167,15 @@
 
         {{-- Daftar listing --}}
         <section class="space-y-4" aria-labelledby="list-title">
-            <h2 id="list-title" class="text-[22px] font-bold leading-7">
-                {{ request('q') ? 'Hasil untuk “'.request('q').'”' : 'Tersedia sekarang' }}
-            </h2>
+            <div class="flex items-center justify-between gap-4">
+                <h2 id="list-title" class="text-[22px] font-bold leading-7">
+                    {{ request('q') ? 'Hasil untuk “'.request('q').'”' : ($here ? 'Dekat kamu' : 'Tersedia sekarang') }}
+                    @if ($radius)<span class="text-base font-medium text-muted">· ≤ {{ $radius }} km</span>@endif
+                </h2>
+                <a href="{{ route('map', request()->query()) }}" class="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
+                    <x-icon name="map" class="h-4 w-4" /> Lihat di peta
+                </a>
+            </div>
 
             {{-- Figma: State-Loading-Skeleton — tampil saat mencari/memfilter/pindah halaman --}}
             <div x-show="loading" x-cloak class="grid gap-3 md:grid-cols-2 md:gap-5 lg:grid-cols-4" aria-hidden="true">

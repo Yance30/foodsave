@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Claim;
 use App\Models\FoodListing;
+use App\Services\Notifier;
+use App\Support\Geo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -104,8 +106,8 @@ class ClaimController extends Controller
                 'claim_code' => $this->generateClaimCode(),
                 'status' => 'booked',
                 'claimed_at' => now(),
-                // distance_km null: lokasi penerima belum ditangkap (susulan).
-                'distance_km' => null,
+                // Jarak dari lokasi penerima (sesi/default) → emisi transportasi di impact log.
+                'distance_km' => Geo::fromCurrent($locked->provider?->lat, $locked->provider?->lng, $request),
             ]);
         });
 
@@ -113,7 +115,36 @@ class ClaimController extends Controller
             return back()->with('error', 'Stok tidak mencukupi. Coba kurangi jumlah porsi.');
         }
 
+        Notifier::claimCreated($claim);
+
         return redirect()->route('claims.show', $claim);
+    }
+
+    /** Penerima membatalkan klaimnya sendiri (stok langsung kembali ke listing). */
+    public function cancel(Request $request, Claim $claim)
+    {
+        abort_unless($claim->receiver_id === $request->user()->id, 403);
+
+        if ($claim->status !== 'booked') {
+            return back()->with('error', 'Klaim ini sudah tidak bisa dibatalkan.');
+        }
+
+        DB::transaction(function () use ($claim) {
+            $claim->update(['status' => 'cancelled']);
+
+            $listing = FoodListing::whereKey($claim->listing_id)->lockForUpdate()->first();
+            if ($listing) {
+                $listing->qty_available += $claim->qty;
+                if ($listing->status === 'sold_out' && $listing->pickup_end->isFuture()) {
+                    $listing->status = 'active';
+                }
+                $listing->save();
+            }
+        });
+
+        Notifier::claimCancelledByReceiver($claim);
+
+        return redirect()->route('claims.index')->with('success', 'Klaim '.$claim->claim_code.' dibatalkan. Terima kasih sudah memberi kesempatan ke penerima lain.');
     }
 
     /** Format Figma: FS-7K2Q (4 karakter alfanumerik). */

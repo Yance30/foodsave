@@ -101,14 +101,7 @@
                                 <input type="search" name="q" value="{{ request('q') }}" placeholder="{{ $isAdmin ? 'Cari…' : 'Cari listing atau kode…' }}"
                                     class="h-10 w-full rounded-btn border border-line bg-surface2 pe-3 ps-9 text-sm placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30">
                             </form>
-                            <a href="{{ $isAdmin ? route('admin.verifications') : route('provider.confirm') }}"
-                                class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line hover:bg-surface2"
-                                aria-label="{{ $isAdmin ? 'Penyedia menunggu verifikasi' : 'Klaim menunggu' }}: {{ $waiting }}">
-                                <x-icon name="bell" class="h-5 w-5" />
-                                @if ($waiting)
-                                    <span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-danger ring-2 ring-bg"></span>
-                                @endif
-                            </a>
+                            <x-notification-bell :bordered="true" />
                             @isset($actions)
                                 {{ $actions }}
                             @endisset

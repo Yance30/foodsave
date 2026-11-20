@@ -16,6 +16,8 @@
             <nav class="rounded-card border border-line bg-surface p-2 lg:sticky lg:top-24" aria-label="Pengaturan">
                 @foreach ([
                     ['#data-akun', 'user', 'Data akun'],
+                    ['#lokasi', 'pin', 'Lokasi default'],
+                    [route('notifications.index'), 'bell', 'Notifikasi'],
                     ['#tampilan', 'sun', 'Tampilan'],
                     ['#kata-sandi', 'shield', 'Kata sandi'],
                     [route('about').'#keamanan-pangan', 'heart', 'Keamanan pangan'],
@@ -51,6 +53,59 @@
                 </section>
 
                 @include('profile.partials.update-profile-information-form')
+
+                {{-- Lokasi default (Figma R7) --}}
+                <section id="lokasi" class="scroll-mt-24 rounded-card border border-line bg-surface p-5"
+                    x-data="{ busy: false, err: '', locate() {
+                        if (! navigator.geolocation) { this.err = 'Browser tidak mendukung lokasi.'; return; }
+                        this.busy = true; this.err = '';
+                        navigator.geolocation.getCurrentPosition(
+                            (p) => { this.$refs.lat.value = p.coords.latitude.toFixed(7); this.$refs.lng.value = p.coords.longitude.toFixed(7); this.$refs.gps.submit(); },
+                            () => { this.busy = false; this.err = 'Izin lokasi ditolak. Pilih kecamatan saja.'; });
+                    } }">
+                    <h2 class="text-lg font-semibold">Lokasi default</h2>
+                    <p class="mt-1 text-sm text-muted">Dipakai untuk urutan "Terdekat", jarak di setiap listing, dan estimasi emisi perjalanan saat mengambil makanan.</p>
+
+                    <div class="mt-4 flex flex-wrap items-center gap-3 rounded-card bg-surface2 p-4">
+                        <span class="grid h-10 w-10 place-items-center rounded-full bg-primarysoft text-primary"><x-icon name="pin" class="h-5 w-5" /></span>
+                        <div class="min-w-0 flex-1">
+                            <p class="font-semibold">{{ $user->location_label ?: 'Belum diatur' }}</p>
+                            <p class="text-xs text-muted">{{ $user->hasLocation() ? number_format($user->lat, 4).', '.number_format($user->lng, 4) : 'Atur sekali, berlaku setiap kali kamu masuk.' }}</p>
+                        </div>
+                        @if ($user->hasLocation())
+                            <form method="POST" action="{{ route('location.clear') }}">
+                                @csrf
+                                <input type="hidden" name="clear_default" value="1">
+                                <x-button variant="secondary" size="sm">Hapus</x-button>
+                            </form>
+                        @endif
+                    </div>
+
+                    <div class="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+                        <form method="POST" action="{{ route('location.update') }}" class="flex gap-2">
+                            @csrf
+                            <input type="hidden" name="save_default" value="1">
+                            <label for="default-district" class="sr-only">Kecamatan</label>
+                            <select id="default-district" name="district" class="field" required>
+                                <option value="" disabled selected>Pilih kecamatan…</option>
+                                @foreach (array_keys(config('foodsave.districts')) as $district)
+                                    <option value="{{ $district }}" @selected($user->location_label === $district.', Malang')>{{ $district }}</option>
+                                @endforeach
+                            </select>
+                            <x-button size="lg" class="shrink-0">Simpan</x-button>
+                        </form>
+                        <form x-ref="gps" method="POST" action="{{ route('location.update') }}">
+                            @csrf
+                            <input type="hidden" name="save_default" value="1">
+                            <input type="hidden" name="lat" x-ref="lat">
+                            <input type="hidden" name="lng" x-ref="lng">
+                            <x-button type="button" variant="outline" size="lg" class="w-full" x-on:click="locate()" x-bind:disabled="busy">
+                                <x-icon name="navigation" class="h-4 w-4" /> <span x-text="busy ? 'Mencari…' : 'Pakai GPS'">Pakai GPS</span>
+                            </x-button>
+                        </form>
+                    </div>
+                    <p x-show="err" x-cloak class="mt-2 text-xs text-danger" x-text="err"></p>
+                </section>
 
                 {{-- Tampilan --}}
                 <section id="tampilan" class="scroll-mt-24 rounded-card border border-line bg-surface p-5"

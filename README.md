@@ -30,14 +30,15 @@ Proyek ini dikembangkan sebagai **Proyek Akhir Sistem Informasi Bisnis, Fakultas
 
 | Penerima | Penyedia | Admin |
 |---|---|---|
-| Cari & filter listing (skema, kategori, urutan) | Onboarding profil usaha + titik lokasi | Verifikasi penyedia dengan daftar periksa |
+| Cari & filter listing (skema, kategori, jarak, urutan "Terdekat") | Onboarding profil usaha, titik lokasi, jam operasional | Verifikasi penyedia: dokumen + daftar periksa |
+| Lokasi via GPS/kecamatan, jarak di setiap listing, **peta** | Unggah dokumen verifikasi (NIB, foto usaha, KTP) — privat | Tolak dengan alasan → penyedia memperbaiki & mengajukan ulang |
 | Detail listing dengan peta & rute | Tayangkan surplus dengan pratinjau kartu langsung | Kelola pengguna & peran |
-| Klaim maks. 2 porsi, kode `FS-XXXX` + hitung mundur | Simpan draf, tutup, tayangkan ulang listing | Kelola faktor emisi (sumber & tahun) |
+| Klaim maks. 2 porsi, kode `FS-XXXX` + hitung mundur, **batalkan klaim** | Hingga 3 foto per listing, simpan draf, tutup, tayangkan ulang | Kelola faktor emisi (sumber & tahun) |
 | Riwayat klaim & status kedaluwarsa | Konfirmasi pengambilan dengan input kode | Dashboard platform & grafik bulanan |
 | Dashboard dampak pribadi, grafik mingguan, lencana | Statistik harian & bulanan usaha | Nonaktifkan/aktifkan akun (riwayat tetap tersimpan) |
 | | | Kata sandi sementara & tombol **Segarkan data demo** |
 
-**Lainnya:** animasi masuk & sambutan setelah login, halaman error bergaya FoodSave (403/404/419/429/500/503), banner saat koneksi terputus, skeleton saat memuat, mode gelap (default) & terang, responsif (desktop · tablet · mobile dengan tab bar), antarmuka berbahasa Indonesia, foto otomatis dikompres ke WebP ≤ 800 px.
+**Semua peran:** notifikasi dalam aplikasi (klaim baru, dibatalkan, diambil, kedaluwarsa, verifikasi). **Lainnya:** animasi masuk & sambutan setelah login, halaman error bergaya FoodSave (403/404/419/429/500/503), banner saat koneksi terputus, skeleton saat memuat, mode gelap (default) & terang, responsif (desktop · tablet · mobile dengan tab bar), antarmuka berbahasa Indonesia, foto otomatis dikompres ke WebP ≤ 800 px.
 
 ## 🔄 Cara kerja
 
@@ -93,7 +94,7 @@ Faktor emisi dapat diubah admin dan hanya berlaku untuk perhitungan baru. Seluru
 | Frontend | Blade components, Tailwind CSS 3, Alpine.js 3, Vite |
 | Basis data | MySQL / MariaDB (produksi), SQLite (pengembangan & pengujian) |
 | Gambar | Intervention Image 3 (konversi WebP) |
-| Peta | OpenStreetMap embed + tautan rute Google Maps |
+| Peta | Leaflet 1.9 + OpenStreetMap, jarak Haversine, tautan rute Google Maps |
 | Hosting | InfinityFree (shared hosting, tanpa SSH/cron) |
 
 ### Model data
@@ -153,7 +154,7 @@ Buka `http://127.0.0.1:8000`. Untuk pengembangan dengan hot reload, jalankan `np
 php artisan test
 ```
 
-**51 tes · 208 asersi** lulus, dijalankan otomatis oleh GitHub Actions di setiap push (termasuk cek gaya kode Laravel Pint). Pengujian fungsional *black-box* F-01–F-11 (`tests/Feature/FunctionalBlackBoxTest.php`) dipetakan ke Tabel 4.7 laporan — lihat [`docs/tabel-4-7.md`](docs/tabel-4-7.md).
+**60 tes · 268 asersi** lulus, dijalankan otomatis oleh GitHub Actions di setiap push (termasuk cek gaya kode Laravel Pint). Pengujian fungsional *black-box* F-01–F-11 (`tests/Feature/FunctionalBlackBoxTest.php`) dipetakan ke Tabel 4.7 laporan — lihat [`docs/tabel-4-7.md`](docs/tabel-4-7.md).
 
 | ID | Skenario | Hasil yang diharapkan |
 |---|---|---|
@@ -211,10 +212,8 @@ docs/                     # tabel pengujian & screenshot
 
 ## 🗺️ Pengembangan berikutnya
 
-- Lokasi penerima & jarak (urutan "Terdekat", filter radius, emisi transportasi)
-- Notifikasi dalam aplikasi untuk klaim baru dan status verifikasi
-- Beberapa foto per listing dan unggah dokumen verifikasi usaha
-- Pembatalan klaim oleh penerima
+- Notifikasi email/push (saat ini dalam aplikasi; email aktif bila SMTP diisi)
+- Rute navigasi langsung di dalam peta
 
 ---
 

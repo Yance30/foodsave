@@ -41,6 +41,23 @@ class FoodListing extends Model
         return $this->hasMany(Claim::class, 'listing_id');
     }
 
+    public function photos(): HasMany
+    {
+        return $this->hasMany(ListingPhoto::class, 'food_listing_id')->orderBy('position');
+    }
+
+    /** Semua foto (sampul dulu) sebagai path relatif public. */
+    public function galleryPaths(): array
+    {
+        $paths = $this->photos->pluck('path')->all();
+
+        if ($this->image_path && ! in_array($this->image_path, $paths, true)) {
+            array_unshift($paths, $this->image_path);
+        }
+
+        return $paths;
+    }
+
     public function isFree(): bool
     {
         return $this->scheme === 'free';

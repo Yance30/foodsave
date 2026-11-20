@@ -7,11 +7,15 @@ use App\Models\EmissionFactor;
 use App\Models\FoodCategory;
 use App\Models\FoodListing;
 use App\Models\ImpactLog;
+use App\Models\ProviderDocument;
 use App\Models\ProviderProfile;
 use App\Services\ImpactCalculator;
+use App\Services\Notifier;
 use App\Services\PhotoUpload;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ProviderController extends Controller
 {
@@ -19,6 +23,9 @@ class ProviderController extends Controller
     private const DEFAULT_LAT = -7.9666;
 
     private const DEFAULT_LNG = 112.6326;
+
+    // Figma P2: "Foto makanan (maks. 3)".
+    private const MAX_PHOTOS = 3;
 
     private function profile(Request $request): ?ProviderProfile
     {
@@ -127,7 +134,7 @@ class ProviderController extends Controller
         $data = $this->validateListing($request);
         $isDraft = $request->boolean('draft');
 
-        FoodListing::create([
+        $listing = FoodListing::create([
             'provider_id' => $profile->id,
             'category_id' => $data['category_id'],
             'title' => $data['title'],
@@ -141,10 +148,9 @@ class ProviderController extends Controller
             'pickup_start' => $data['pickup_start'],
             'pickup_end' => $data['pickup_end'],
             'status' => $isDraft ? 'draft' : 'active',
-            'image_path' => $request->hasFile('image')
-                ? $photos->store($request->file('image'))
-                : null,
         ]);
+
+        $this->syncPhotos($listing, $this->uploadedPhotos($request), $photos);
 
         return redirect()->route('provider.listings.index')
             ->with('success', $isDraft ? 'Draf listing disimpan.' : 'Listing berhasil ditayangkan.');
@@ -174,9 +180,7 @@ class ProviderController extends Controller
             ]);
         }
 
-        $oldImage = $listing->image_path;
-
-        DB::transaction(function () use ($listing, $data, $request, $photos, $claimed) {
+        DB::transaction(function () use ($listing, $data, $request, $claimed) {
             $newAvailable = $data['qty_total'] - $claimed;
 
             $listing->fill([
@@ -193,10 +197,6 @@ class ProviderController extends Controller
                 'pickup_end' => $data['pickup_end'],
             ]);
 
-            if ($request->hasFile('image')) {
-                $listing->image_path = $photos->store($request->file('image'));
-            }
-
             if ($request->has('draft')) {
                 $listing->status = $request->boolean('draft') ? 'draft' : 'active';
             }
@@ -208,11 +208,54 @@ class ProviderController extends Controller
             $listing->save();
         });
 
-        if ($request->hasFile('image') && $oldImage !== $listing->image_path) {
-            $photos->delete($oldImage);
+        // Unggahan baru menggantikan seluruh set foto lama.
+        if ($files = $this->uploadedPhotos($request)) {
+            $this->syncPhotos($listing, $files, $photos);
         }
 
         return redirect()->route('provider.listings.index')->with('success', 'Listing diperbarui.');
+    }
+
+    /**
+     * Foto dari form: input lama `image` (tunggal) + `photos[]` (multi), maks. 3.
+     *
+     * @return list<UploadedFile>
+     */
+    private function uploadedPhotos(Request $request): array
+    {
+        $files = array_merge(
+            $request->hasFile('image') ? [$request->file('image')] : [],
+            array_values(array_filter((array) $request->file('photos', []))),
+        );
+
+        return array_slice($files, 0, self::MAX_PHOTOS);
+    }
+
+    /**
+     * Simpan foto (WebP 800 px): pertama = sampul (image_path), sisanya galeri.
+     *
+     * @param  list<UploadedFile>  $files
+     */
+    private function syncPhotos(FoodListing $listing, array $files, PhotoUpload $photos): void
+    {
+        if (! $files) {
+            return;
+        }
+
+        $old = $listing->galleryPaths();
+        $stored = array_map(fn ($file) => $photos->store($file), $files);
+
+        DB::transaction(function () use ($listing, $stored) {
+            $listing->photos()->delete();
+            $listing->update(['image_path' => $stored[0]]);
+            foreach (array_slice($stored, 1) as $i => $path) {
+                $listing->photos()->create(['path' => $path, 'position' => $i + 1]);
+            }
+        });
+
+        foreach (array_diff($old, $stored) as $path) {
+            $photos->delete($path);
+        }
     }
 
     /** Figma P3 "Tutup": hentikan listing lebih awal; klaim booked tetap bisa diambil. */
@@ -255,9 +298,11 @@ class ProviderController extends Controller
             return back()->with('error', 'Listing masih punya klaim yang menunggu diambil. Tutup listing saja agar klaim tetap berlaku.');
         }
 
-        $image = $listing->image_path;
+        $paths = $listing->galleryPaths();
         $listing->delete();
-        $photos->delete($image);
+        foreach ($paths as $path) {
+            $photos->delete($path);
+        }
 
         return redirect()->route('provider.listings.index')->with('success', 'Listing dihapus.');
     }
@@ -276,7 +321,10 @@ class ProviderController extends Controller
             'pickup_start' => ['required', 'date'],
             'pickup_end' => ['required', 'date', 'after:pickup_start', 'after:now'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'photos' => ['nullable', 'array', 'max:'.self::MAX_PHOTOS],
+            'photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ], [
+            'photos.max' => 'Maksimal '.self::MAX_PHOTOS.' foto per listing.',
             'original_price.required_if' => 'Isi harga normal untuk skema diskon.',
             'sale_price.required_if' => 'Isi harga diskon untuk skema diskon.',
             'sale_price.lt' => 'Harga diskon harus lebih murah dari harga normal.',
@@ -360,6 +408,7 @@ class ProviderController extends Controller
         $claim->save();
 
         app(ImpactCalculator::class)->record($claim);
+        Notifier::claimPickedUp($claim);
 
         return redirect()->route('provider.confirm')
             ->with('confirmed_claim', $claim->id)
@@ -387,6 +436,8 @@ class ProviderController extends Controller
                 $listing->save();
             }
         });
+
+        Notifier::claimRejectedByProvider($claim);
 
         return back()->with('success', 'Klaim ditolak. Stok dikembalikan.');
     }
@@ -423,22 +474,77 @@ class ProviderController extends Controller
             'business_type' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string', 'max:255'],
             'district' => ['required', 'string', 'max:255'],
+            'opening_hours' => ['nullable', 'string', 'max:100'],
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
-        ProviderProfile::updateOrCreate(
-            ['user_id' => $request->user()->id],
+        $user = $request->user();
+        $wasRejected = $user->isRejected();
+
+        $profile = ProviderProfile::updateOrCreate(
+            ['user_id' => $user->id],
             [
                 'business_name' => $data['business_name'],
                 'business_type' => $data['business_type'],
                 'address' => $data['address'],
                 'district' => $data['district'],
+                'opening_hours' => $data['opening_hours'] ?? null,
                 'lat' => $data['lat'] ?? self::DEFAULT_LAT,
                 'lng' => $data['lng'] ?? self::DEFAULT_LNG,
             ]
         );
 
+        // Profil baru atau perbaikan setelah ditolak → masuk antrean verifikasi admin lagi.
+        if (! $user->is_verified && ($profile->wasRecentlyCreated || $wasRejected)) {
+            $user->update(['rejected_at' => null]);
+            Notifier::verificationRequested($user->fresh());
+
+            return redirect()->route('provider.profile')->with('success', $wasRejected
+                ? 'Profil diperbarui dan diajukan ulang ke admin untuk diverifikasi.'
+                : 'Profil usaha disimpan dan diajukan ke admin untuk diverifikasi.');
+        }
+
         return redirect()->route('provider.profile')->with('success', 'Profil usaha disimpan.');
+    }
+
+    /** Unggah/ganti dokumen verifikasi (disimpan privat di storage/app/private). */
+    public function uploadDocument(Request $request)
+    {
+        $profile = $this->profile($request);
+        if (! $profile) {
+            return redirect()->route('provider.profile')->with('error', 'Simpan profil usaha terlebih dahulu.');
+        }
+
+        $data = $request->validate([
+            'type' => ['required', 'in:'.implode(',', array_keys(ProviderDocument::TYPES))],
+            'document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp', 'max:4096'],
+        ], [
+            'document.mimes' => 'Dokumen harus berformat PDF, JPG, PNG, atau WebP.',
+            'document.max' => 'Ukuran dokumen maksimal 4 MB.',
+        ]);
+
+        $file = $request->file('document');
+        $existing = $profile->documents()->where('type', $data['type'])->first();
+        $path = $file->store('provider-docs/'.$profile->id, 'local');
+
+        if ($existing) {
+            Storage::disk('local')->delete($existing->path);
+            $existing->update(['path' => $path, 'original_name' => $file->getClientOriginalName()]);
+        } else {
+            $profile->documents()->create(['type' => $data['type'], 'path' => $path, 'original_name' => $file->getClientOriginalName()]);
+        }
+
+        return redirect()->route('provider.profile')->with('success', ProviderDocument::TYPES[$data['type']].' berhasil diunggah.');
+    }
+
+    public function deleteDocument(Request $request, ProviderDocument $document)
+    {
+        abort_unless($document->provider_profile_id === $this->profile($request)?->id, 403);
+
+        Storage::disk('local')->delete($document->path);
+        $document->delete();
+
+        return back()->with('success', 'Dokumen dihapus.');
     }
 }

@@ -14,10 +14,6 @@ class AppLayout extends Component
 
     public function render(): View
     {
-        $user = auth()->user();
-
-        return view('layouts.app', [
-            'activeClaims' => $user ? $user->claims()->where('status', 'booked')->count() : 0,
-        ]);
+        return view('layouts.app');
     }
 }

@@ -35,6 +35,14 @@
         </p>
     </div>
 
+    @if ($active && auth()->id() === $claim->receiver_id)
+        <form method="POST" action="{{ route('claims.cancel', $claim) }}" class="float-right mt-2.5"
+            x-data x-on:submit="if (! confirm('Batalkan klaim {{ $claim->claim_code }}? Porsi akan dikembalikan agar bisa diklaim orang lain.')) $event.preventDefault()">
+            @csrf
+            <button type="submit" class="rounded-btn px-2 py-1 text-xs font-semibold text-muted hover:bg-dangersoft hover:text-danger">Batalkan klaim</button>
+        </form>
+    @endif
+
     @if ($active)
         <p class="mt-3 flex items-center gap-1.5 text-sm font-medium text-accenttext"
             x-data="{ left: {{ max(0, (int) now()->diffInSeconds($l->pickup_end, false)) }} }"

@@ -20,22 +20,20 @@
         <div class="fs-page flex min-h-screen flex-col">
             {{-- Top navigation (Figma: Nav/Top · Desktop) --}}
             <header class="sticky top-0 z-30 border-b border-line bg-bg/95 backdrop-blur">
-                <div class="mx-auto flex h-16 max-w-content items-center gap-6 px-4 md:h-[72px] md:px-8">
+                <div class="mx-auto flex h-16 max-w-content items-center gap-3 px-4 md:h-[72px] md:px-6 lg:gap-6 lg:px-8">
                     <a href="{{ route('home') }}" class="flex items-center gap-2.5">
                         <x-application-logo class="h-8 w-8 md:h-9 md:w-9" />
                         <span class="text-lg font-semibold tracking-tight">FoodSave</span>
                     </a>
 
-                    <nav aria-label="Utama" class="hidden items-center gap-1 text-sm font-medium md:flex">
+                    <nav aria-label="Utama" class="hidden items-center gap-0.5 text-sm font-medium md:flex lg:gap-1">
                         <x-nav-link :href="route('home')" :active="request()->routeIs('home', 'listings.*', 'claims.create')" icon="home">Beranda</x-nav-link>
                         <x-nav-link :href="route('claims.index')" :active="request()->routeIs('claims.index', 'claims.show')" icon="ticket">Klaim saya</x-nav-link>
                         <x-nav-link :href="route('impact')" :active="request()->routeIs('impact')" icon="leaf">Dampak</x-nav-link>
                     </nav>
 
                     <div class="ms-auto flex items-center gap-2 md:gap-3">
-                        <span class="hidden items-center gap-1.5 rounded-chip bg-surface2 px-3.5 py-2 text-sm font-medium lg:inline-flex">
-                            <x-icon name="pin" class="h-4 w-4 text-primary" /> Kota Malang
-                        </span>
+                        <x-location-picker />
 
                         <button type="button" x-data x-on:click="window.dispatchEvent(new CustomEvent('theme-toggle'))"
                             class="grid h-10 w-10 place-items-center rounded-chip text-muted hover:bg-surface2 hover:text-ink" aria-label="Ganti tema">
@@ -44,13 +42,7 @@
                         </button>
 
                         @auth
-                            <a href="{{ route('claims.index') }}" class="relative grid h-10 w-10 place-items-center rounded-chip text-ink hover:bg-surface2"
-                                aria-label="Klaim aktif{{ $activeClaims ? ': '.$activeClaims : '' }}">
-                                <x-icon name="bell" class="h-5 w-5" />
-                                @if ($activeClaims)
-                                    <span class="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-danger ring-2 ring-bg"></span>
-                                @endif
-                            </a>
+                            <x-notification-bell />
 
                             <div x-data="{ open: false }" class="relative hidden md:block">
                                 <button type="button" x-on:click="open = !open" x-on:click.outside="open = false"
@@ -59,7 +51,7 @@
                                     <span class="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm font-semibold text-onprimary">
                                         {{ strtoupper(substr($user->name, 0, 1)) }}
                                     </span>
-                                    {{ strtok($user->name, ' ') }}
+                                    <span class="hidden lg:inline">{{ strtok($user->name, ' ') }}</span>
                                     <x-icon name="chevron-down" class="h-4 w-4 text-muted" />
                                 </button>
                                 <div x-show="open" x-cloak x-transition.opacity

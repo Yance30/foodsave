@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ClaimController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ImpactController;
 use App\Http\Controllers\ListingController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\MapController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProviderController;
 use Illuminate\Support\Facades\Route;
@@ -13,13 +17,23 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/listing/{listing}', [ListingController::class, 'show'])->name('listings.show');
 Route::get('/dampak', ImpactController::class)->name('impact');
 Route::view('/tentang', 'about')->name('about');
+Route::get('/peta', MapController::class)->name('map');
+Route::post('/lokasi', [LocationController::class, 'update'])->name('location.update');
+Route::post('/lokasi/hapus', [LocationController::class, 'clear'])->name('location.clear');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/notifikasi', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifikasi/{id}', [NotificationController::class, 'open'])->name('notifications.open');
+    Route::post('/notifikasi/baca-semua', [NotificationController::class, 'readAll'])->name('notifications.readAll');
+    // Dokumen verifikasi: hanya pemilik usaha & admin.
+    Route::get('/dokumen/{document}', DocumentController::class)->name('documents.show');
+
     Route::get('/klaim', [ClaimController::class, 'index'])->name('claims.index');
     Route::get('/klaim/{claim}', [ClaimController::class, 'show'])->name('claims.show');
     // Klaim hanya untuk akun penerima — penyedia/admin tidak bisa mengklaim (mencegah dampak palsu).
     Route::middleware('role:receiver')->group(function () {
         Route::get('/listing/{listing}/klaim', [ClaimController::class, 'create'])->name('claims.create');
+        Route::post('/klaim/{claim}/batal', [ClaimController::class, 'cancel'])->name('claims.cancel');
         Route::post('/listing/{listing}/klaim', [ClaimController::class, 'store'])->middleware('throttle:20,1')->name('claims.store');
     });
 
@@ -39,6 +53,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ProviderController::class, 'dashboard'])->name('dashboard');
         Route::get('/profil', [ProviderController::class, 'editProfile'])->name('profile');
         Route::put('/profil', [ProviderController::class, 'updateProfile'])->name('profile.update');
+        Route::post('/profil/dokumen', [ProviderController::class, 'uploadDocument'])->name('documents.store');
+        Route::delete('/profil/dokumen/{document}', [ProviderController::class, 'deleteDocument'])->name('documents.destroy');
         Route::get('/listing', [ProviderController::class, 'listings'])->name('listings.index');
         Route::get('/listing/buat', [ProviderController::class, 'create'])->name('listings.create');
         Route::post('/listing', [ProviderController::class, 'store'])->name('listings.store');

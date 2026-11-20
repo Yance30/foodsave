@@ -28,18 +28,39 @@
         <div class="grid gap-6 lg:grid-cols-[1fr_440px] lg:items-start">
             {{-- Kolom kiri: foto, catatan, lokasi --}}
             <div class="space-y-6">
-                <div class="relative aspect-[16/9] overflow-hidden rounded-card bg-surface2">
-                    @if ($listing->image_path)
-                        <img src="{{ asset($listing->image_path) }}" alt="{{ $listing->title }}" class="h-full w-full object-cover {{ $available ? '' : 'opacity-60 grayscale' }}">
-                    @else
-                        <div class="grid h-full w-full place-items-center text-muted"><x-icon name="image" class="h-12 w-12" /></div>
+                @php $gallery = array_map(fn ($p) => asset($p), $listing->galleryPaths()); @endphp
+                {{-- Galeri (Figma R3: foto besar + "1/3" + thumbnail) --}}
+                <div x-data="{ i: 0, n: {{ count($gallery) }} }" class="space-y-3">
+                    <div class="relative aspect-[16/9] overflow-hidden rounded-card bg-surface2">
+                        @forelse ($gallery as $k => $src)
+                            <img src="{{ $src }}" alt="{{ $listing->title }}{{ count($gallery) > 1 ? ' — foto '.($k + 1) : '' }}" @if ($k) loading="lazy" @endif
+                                x-show="i === {{ $k }}" @if ($k) x-cloak @endif
+                                class="h-full w-full object-cover {{ $available ? '' : 'opacity-60 grayscale' }}">
+                        @empty
+                            <div class="grid h-full w-full place-items-center text-muted"><x-icon name="image" class="h-12 w-12" /></div>
+                        @endforelse
+                        <x-badge :type="$listing->isFree() ? 'gratis' : 'diskon'" solid class="absolute left-3 top-3 uppercase">{{ $listing->schemeLabel() }}</x-badge>
+                        @if (count($gallery) > 1)
+                            <button type="button" x-on:click="i = (i + n - 1) % n" class="absolute left-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-scrim/60 text-white hover:bg-scrim/80" aria-label="Foto sebelumnya"><x-icon name="chevron-left" class="h-5 w-5" /></button>
+                            <button type="button" x-on:click="i = (i + 1) % n" class="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-scrim/60 text-white hover:bg-scrim/80" aria-label="Foto berikutnya"><x-icon name="chevron-right" class="h-5 w-5" /></button>
+                            <span class="absolute bottom-3 right-3 rounded-md bg-scrim/70 px-2 py-0.5 text-xs font-semibold text-white" x-text="(i + 1) + '/' + n">1/{{ count($gallery) }}</span>
+                        @endif
+                        @unless ($available)
+                            <span class="absolute inset-x-0 bottom-0 bg-scrim/80 px-4 py-3 text-center text-sm font-semibold text-white">
+                                {{ $listing->qty_available <= 0 ? 'Stok habis' : 'Listing sudah ditutup' }}
+                            </span>
+                        @endunless
+                    </div>
+                    @if (count($gallery) > 1)
+                        <div class="flex gap-3" role="tablist" aria-label="Foto listing">
+                            @foreach ($gallery as $k => $src)
+                                <button type="button" x-on:click="i = {{ $k }}" role="tab" :aria-selected="i === {{ $k }}"
+                                    class="h-16 w-24 overflow-hidden rounded-[10px] border-2 transition" :class="i === {{ $k }} ? 'border-primary' : 'border-transparent opacity-70 hover:opacity-100'">
+                                    <img src="{{ $src }}" alt="" loading="lazy" class="h-full w-full object-cover">
+                                </button>
+                            @endforeach
+                        </div>
                     @endif
-                    <x-badge :type="$listing->isFree() ? 'gratis' : 'diskon'" solid class="absolute left-3 top-3 uppercase">{{ $listing->schemeLabel() }}</x-badge>
-                    @unless ($available)
-                        <span class="absolute inset-x-0 bottom-0 bg-scrim/80 px-4 py-3 text-center text-sm font-semibold text-white">
-                            {{ $listing->qty_available <= 0 ? 'Stok habis' : 'Listing sudah ditutup' }}
-                        </span>
-                    @endunless
                 </div>
 
                 @if ($listing->note)
@@ -56,9 +77,24 @@
                     <h2 class="text-lg font-semibold">Lokasi pengambilan</h2>
                     @if ($hasCoords)
                         <div class="overflow-hidden rounded-card border border-line bg-surface2">
-                            <iframe title="Peta lokasi {{ $p->business_name }}" loading="lazy" class="h-[220px] w-full border-0 dark:opacity-80 dark:invert-[0.9] dark:hue-rotate-180"
-                                src="https://www.openstreetmap.org/export/embed.html?bbox={{ $p->lng - 0.006 }}%2C{{ $p->lat - 0.004 }}%2C{{ $p->lng + 0.006 }}%2C{{ $p->lat + 0.004 }}&amp;layer=mapnik&amp;marker={{ $p->lat }}%2C{{ $p->lng }}"></iframe>
+                            <div id="fs-mini-map" class="h-[220px] w-full" role="img" aria-label="Peta lokasi {{ $p->business_name }}"></div>
                         </div>
+                        <x-leaflet-assets />
+                        <script>
+                            (function () {
+                                const css = (v) => `rgb(${getComputedStyle(document.documentElement).getPropertyValue(v).trim().replaceAll(' ', ',')})`;
+                                const pin = (c, s) => L.divIcon({ className: '', html: `<div class="fs-pin" style="width:${s}px;height:${s}px;background:${c}"></div>`, iconSize: [s, s], iconAnchor: [s / 2, s / 2] });
+                                const shop = [{{ $p->lat }}, {{ $p->lng }}];
+                                const here = @json(\App\Support\Geo::current());
+                                const map = L.map('fs-mini-map', { scrollWheelZoom: false, zoomControl: true, attributionControl: true }).setView(shop, 16);
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(map);
+                                L.marker(shop, { icon: pin(css('--c-primary'), 22), title: @json($p->business_name) }).addTo(map);
+                                if (here) {
+                                    L.marker([here.lat, here.lng], { icon: pin(css('--c-info'), 14), title: 'Lokasimu' }).addTo(map);
+                                    map.fitBounds([shop, [here.lat, here.lng]], { padding: [30, 30], maxZoom: 16 });
+                                }
+                            })();
+                        </script>
                     @endif
                     <div class="flex items-center justify-between gap-4">
                         <div>
@@ -114,8 +150,13 @@
                         <dd class="mt-1 font-semibold text-accenttext">{{ $listing->pickupWindow() }}</dd>
                     </div>
                     <div class="rounded-card bg-surface2 p-3">
-                        <dt class="flex items-center gap-1.5 text-xs text-muted"><x-icon name="pin" class="h-3.5 w-3.5" /> Lokasi</dt>
-                        <dd class="mt-1 font-semibold">{{ $p->district }}, Malang</dd>
+                        @if ($distance !== null)
+                            <dt class="flex items-center gap-1.5 text-xs text-muted"><x-icon name="pin" class="h-3.5 w-3.5" /> Jarak</dt>
+                            <dd class="mt-1 font-semibold">{{ \App\Support\Geo::format($distance) }} dari kamu</dd>
+                        @else
+                            <dt class="flex items-center gap-1.5 text-xs text-muted"><x-icon name="pin" class="h-3.5 w-3.5" /> Lokasi</dt>
+                            <dd class="mt-1 font-semibold">{{ $p->district }}, Malang</dd>
+                        @endif
                     </div>
                     <div class="rounded-card bg-surface2 p-3">
                         <dt class="flex items-center gap-1.5 text-xs text-muted"><x-icon name="calendar" class="h-3.5 w-3.5" /> Tanggal</dt>
@@ -133,6 +174,9 @@
                             @endif
                         </p>
                         <p class="text-xs text-muted">Penyedia sejak {{ $p->created_at?->year }} · {{ $completedClaims }} klaim selesai</p>
+                        @if ($p->opening_hours)
+                            <p class="mt-0.5 flex items-center gap-1 text-xs text-muted"><x-icon name="clock" class="h-3 w-3" /> {{ $p->opening_hours }}</p>
+                        @endif
                     </div>
                 </div>
 

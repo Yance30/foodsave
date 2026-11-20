@@ -8,6 +8,7 @@ use App\Models\FoodListing;
 use App\Models\ImpactLog;
 use App\Models\User;
 use App\Services\DemoData;
+use App\Services\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -35,7 +36,7 @@ class AdminController extends Controller
             'users' => User::count(),
             'usersThisMonth' => User::where('created_at', '>=', $monthStart)->count(),
             'providersVerified' => User::where('role', 'provider')->where('is_verified', true)->count(),
-            'pending' => User::with('providerProfile')->where('role', 'provider')->where('is_verified', false)->latest()->get(),
+            'pending' => User::with('providerProfile')->where('role', 'provider')->where('is_verified', false)->whereNull('rejected_at')->latest()->get(),
             'listingsThisMonth' => $listingsThisMonth,
             'listingsDelta' => $listingsLastMonth ? (int) round(($listingsThisMonth - $listingsLastMonth) / $listingsLastMonth * 100) : null,
             'weight' => (float) ImpactLog::sum('weight_kg'),
@@ -48,7 +49,7 @@ class AdminController extends Controller
 
     public function verifications(Request $request)
     {
-        $providers = User::with('providerProfile')
+        $providers = User::with('providerProfile.documents')
             ->where('role', 'provider')
             ->orderBy('is_verified')
             ->latest()
@@ -56,12 +57,12 @@ class AdminController extends Controller
 
         $selected = $request->query('id')
             ? $providers->firstWhere('id', (int) $request->query('id'))
-            : $providers->firstWhere('is_verified', false);
+            : $providers->first(fn (User $u) => ! $u->is_verified && ! $u->isRejected());
 
         return view('admin.verifications', [
             'providers' => $providers,
             'selected' => $selected,
-            'pendingCount' => $providers->where('is_verified', false)->count(),
+            'pendingCount' => $providers->filter(fn (User $u) => ! $u->is_verified && ! $u->isRejected())->count(),
         ]);
     }
 
@@ -105,7 +106,8 @@ class AdminController extends Controller
     {
         abort_unless($user->role === 'provider', 404);
 
-        $user->update(['is_verified' => true]);
+        $user->update(['is_verified' => true, 'rejected_at' => null, 'rejection_note' => null]);
+        Notifier::providerApproved($user);
 
         return back()->with('success', $user->name.' kini terverifikasi.');
     }
@@ -115,9 +117,22 @@ class AdminController extends Controller
         abort_unless($user->role === 'provider', 404);
         abort_if($user->id === $request->user()->id, 403, 'Tidak bisa menolak akun sendiri.');
 
-        $this->deactivate($user);
+        $data = $request->validate([
+            'rejection_note' => ['required', 'string', 'min:10', 'max:500'],
+        ], [
+            'rejection_note.required' => 'Tulis alasan penolakan agar penyedia tahu apa yang harus diperbaiki.',
+            'rejection_note.min' => 'Alasan penolakan minimal 10 karakter.',
+        ]);
 
-        return back()->with('success', 'Pengajuan ditolak. Akun penyedia dinonaktifkan.');
+        // Ditolak ≠ dinonaktifkan: penyedia bisa memperbaiki profil lalu mengajukan ulang.
+        $user->update([
+            'is_verified' => false,
+            'rejected_at' => now(),
+            'rejection_note' => $data['rejection_note'],
+        ]);
+        Notifier::providerRejected($user, $data['rejection_note']);
+
+        return redirect()->route('admin.verifications')->with('success', 'Pengajuan '.($user->providerProfile?->business_name ?? $user->name).' ditolak. Penyedia sudah diberi tahu alasannya.');
     }
 
     public function updateUser(Request $request, User $user)

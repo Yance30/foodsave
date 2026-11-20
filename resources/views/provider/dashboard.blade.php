@@ -27,6 +27,15 @@
                 </div>
                 <x-button :href="route('provider.profile')" variant="secondary" size="sm"><x-icon name="store" class="h-4 w-4" /> Isi profil</x-button>
             </div>
+        @elseif ($user->isRejected())
+            <div class="flex flex-wrap items-center gap-4 rounded-card bg-dangersoft p-4 text-danger" role="alert">
+                <x-icon name="x-circle" class="h-5 w-5 shrink-0" />
+                <div class="min-w-0 flex-1">
+                    <p class="font-semibold">Pengajuan verifikasi ditolak</p>
+                    <p class="text-sm">Alasan: {{ $user->rejection_note }}</p>
+                </div>
+                <x-button :href="route('provider.profile')" variant="secondary" size="sm"><x-icon name="edit" class="h-4 w-4" /> Perbaiki &amp; ajukan ulang</x-button>
+            </div>
         @elseif (! $verified)
             {{-- Figma P1-Dashboard-Belum-Terverifikasi --}}
             <div class="flex flex-wrap items-center gap-4 rounded-card bg-accentsoft p-4">

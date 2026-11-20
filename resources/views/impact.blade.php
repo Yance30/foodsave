@@ -137,7 +137,7 @@
 
         <p id="metodologi" class="flex items-start gap-2 text-xs text-muted">
             <x-icon name="info" class="mt-px h-3.5 w-3.5 shrink-0" />
-            Estimasi: CO₂e = kg makanan × {{ $factorValue }} kg CO₂e/kg (faktor emisi food waste{{ $factor?->source ? ' — '.$factor->source : '' }}). Setara km motor = CO₂e ÷ {{ str_replace('.', ',', (string) \App\Services\ImpactCalculator::TRANSPORT_KG_CO2E_PER_KM) }} kg/km. Bukan pengukuran langsung.
+            Estimasi: CO₂e = kg makanan × {{ $factorValue }} kg CO₂e/kg (faktor emisi food waste{{ $factor?->source ? ' — '.$factor->source : '' }}). Setara km motor = CO₂e ÷ {{ str_replace('.', ',', (string) \App\Services\ImpactCalculator::transportFactor()) }} kg/km. Bukan pengukuran langsung.
         </p>
     </div>
 </x-app-layout>
